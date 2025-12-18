@@ -1,0 +1,115 @@
+/* Fade in animation for journal opening */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Fade out + slide animation for journal hiding */
+@keyframes fadeOutSlide {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+}
+
+/* Blur transition effect */
+@keyframes blurOut {
+    from {
+        filter: blur(0px);
+        opacity: 1;
+    }
+
+    to {
+        filter: blur(8px);
+        opacity: 0;
+    }
+}
+
+/* Apply animations */
+.animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-fadeOutSlide {
+    animation: fadeOutSlide 0.3s ease-out forwards;
+}
+
+.animate-blurOut {
+    animation: blurOut 0.4s ease-out forwards;
+}
+
+/* Journal entry wrapper with transition */
+.journal-entry {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.journal-entry.hiding {
+    animation: fadeOutSlide 0.3s ease-out forwards,
+        blurOut 0.3s ease-out forwards;
+}
+
+/* Privacy badge pulse animation */
+@keyframes privatePulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 0 rgba(236, 72, 153, 0.4);
+    }
+
+    50% {
+        box-shadow: 0 0 0 8px rgba(236, 72, 153, 0);
+    }
+}
+
+.privacy-badge {
+    animation: privatePulse 2s infinite;
+}
+
+/* Command Palette Animations */
+@keyframes cmdkFadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes cmdkZoomIn {
+    from {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.animate-in {
+    animation-duration: 200ms;
+    animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+    animation-fill-mode: forwards;
+}
+
+.fade-in {
+    animation-name: cmdkFadeIn;
+}
+
+.zoom-in-95 {
+    animation-name: cmdkZoomIn;
+}

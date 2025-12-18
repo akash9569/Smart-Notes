@@ -1,0 +1,314 @@
+/* Premium Page Template Styles */
+/* Inspired by GoodNotes, Notion, and Samsung Notes */
+
+:root {
+    --line-color-light: rgba(0, 0, 0, 0.06);
+    --line-color-cream: rgba(0, 0, 0, 0.06);
+    --line-color-dark: rgba(255, 255, 255, 0.08);
+    
+    --grid-color-light: rgba(0, 0, 0, 0.06);
+    --grid-color-cream: rgba(0, 0, 0, 0.06);
+    --grid-color-dark: rgba(255, 255, 255, 0.08);
+    
+    --dot-color-light: rgba(0, 0, 0, 0.15);
+    --dot-color-cream: rgba(0, 0, 0, 0.15);
+    --dot-color-dark: rgba(255, 255, 255, 0.15);
+
+    --paper-cream: #fdfbf7;
+    --paper-dark: #1a1a1a;
+}
+
+.dark {
+    --line-color-light: rgba(255, 255, 255, 0.08);
+    --grid-color-light: rgba(255, 255, 255, 0.08);
+    --dot-color-light: rgba(255, 255, 255, 0.15);
+}
+
+/* Base Template Container */
+.template-container {
+    min-height: 100%;
+    position: relative;
+    transition: background-color 0.3s ease;
+}
+
+/* Ensure the editor content sits correctly on the lines */
+.template-container .ProseMirror {
+    min-height: calc(100vh - 200px);
+    background: transparent !important;
+    outline: none;
+    position: relative;
+    z-index: 1;
+}
+
+/* ============================================ */
+/* BLANK TEMPLATE */
+/* ============================================ */
+.template-blank .ProseMirror {
+    background: transparent;
+}
+
+/* ============================================ */
+/* LINED PAPER TEMPLATES */
+/* ============================================ */
+
+/* Small Lines (24px) */
+.template-lined-small-default .ProseMirror {
+    background-image: linear-gradient(transparent 23px, var(--line-color-light) 23px);
+    background-size: 100% 24px;
+    background-attachment: local;
+    line-height: 24px !important;
+}
+
+.template-lined-small-cream {
+    background-color: var(--paper-cream) !important;
+}
+.template-lined-small-cream .ProseMirror {
+    background-image: linear-gradient(transparent 23px, var(--line-color-cream) 23px);
+    background-size: 100% 24px;
+    background-attachment: local;
+    line-height: 24px !important;
+}
+.dark .template-lined-small-cream {
+    background-color: var(--paper-dark) !important;
+}
+
+/* Medium Lines (32px) - Standard */
+.template-lined-medium-default .ProseMirror {
+    background-image: linear-gradient(transparent 31px, var(--line-color-light) 31px);
+    background-size: 100% 32px;
+    background-attachment: local;
+    line-height: 32px !important;
+}
+
+.template-lined-medium-cream {
+    background-color: var(--paper-cream) !important;
+}
+.template-lined-medium-cream .ProseMirror {
+    background-image: linear-gradient(transparent 31px, var(--line-color-cream) 31px);
+    background-size: 100% 32px;
+    background-attachment: local;
+    line-height: 32px !important;
+}
+.dark .template-lined-medium-cream {
+    background-color: var(--paper-dark) !important;
+}
+
+/* Large Lines (40px) */
+.template-lined-large-default .ProseMirror {
+    background-image: linear-gradient(transparent 39px, var(--line-color-light) 39px);
+    background-size: 100% 40px;
+    background-attachment: local;
+    line-height: 40px !important;
+}
+
+.template-lined-large-cream {
+    background-color: var(--paper-cream) !important;
+}
+.template-lined-large-cream .ProseMirror {
+    background-image: linear-gradient(transparent 39px, var(--line-color-cream) 39px);
+    background-size: 100% 40px;
+    background-attachment: local;
+    line-height: 40px !important;
+}
+.dark .template-lined-large-cream {
+    background-color: var(--paper-dark) !important;
+}
+
+/* ============================================ */
+/* GRID PAPER TEMPLATES */
+/* ============================================ */
+
+/* Small Grid (16px) */
+.template-grid-small-default .ProseMirror {
+    background-image:
+        linear-gradient(to right, var(--grid-color-light) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color-light) 1px, transparent 1px);
+    background-size: 16px 16px;
+    background-attachment: local;
+}
+
+/* Medium Grid (20px) - Standard */
+.template-grid-medium-default .ProseMirror {
+    background-image:
+        linear-gradient(to right, var(--grid-color-light) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color-light) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-attachment: local;
+}
+
+.template-grid-medium-cream {
+    background-color: var(--paper-cream) !important;
+}
+.template-grid-medium-cream .ProseMirror {
+    background-image:
+        linear-gradient(to right, var(--grid-color-cream) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color-cream) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-attachment: local;
+}
+.dark .template-grid-medium-cream {
+    background-color: var(--paper-dark) !important;
+}
+
+/* Large Grid (24px) */
+.template-grid-large-default .ProseMirror {
+    background-image:
+        linear-gradient(to right, var(--grid-color-light) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color-light) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: local;
+}
+
+/* ============================================ */
+/* DOT GRID TEMPLATE */
+/* ============================================ */
+.template-dotgrid-default .ProseMirror {
+    background-image: radial-gradient(var(--dot-color-light) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: local;
+    background-position: 0 0;
+}
+
+.template-dotgrid-cream {
+    background-color: var(--paper-cream) !important;
+}
+.template-dotgrid-cream .ProseMirror {
+    background-image: radial-gradient(var(--dot-color-cream) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-attachment: local;
+}
+.dark .template-dotgrid-cream {
+    background-color: var(--paper-dark) !important;
+}
+
+/* ============================================ */
+/* CORNELL NOTES TEMPLATE */
+/* ============================================ */
+.template-cornell {
+    position: relative;
+}
+
+.template-cornell .ProseMirror {
+    padding-left: 30% !important; /* Force text to right side */
+    padding-bottom: 120px !important;
+}
+
+/* Cornell Lines using pseudo-elements on container to avoid scrolling issues */
+.template-cornell::before {
+    content: '';
+    position: absolute;
+    left: 30%;
+    top: 0;
+    bottom: 120px;
+    width: 2px;
+    background-color: #ef4444; /* Red line */
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.template-cornell::after {
+    content: '';
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    bottom: 120px;
+    height: 2px;
+    background-color: #ef4444;
+    opacity: 0.3;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.dark .template-cornell::before,
+.dark .template-cornell::after {
+    background-color: #f87171;
+}
+
+/* ============================================ */
+/* CHECKLIST TEMPLATE */
+/* ============================================ */
+.template-checklist .ProseMirror {
+    padding: 24px;
+}
+
+.template-checklist .ProseMirror::before {
+    content: 'Checklist';
+    display: block;
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1f2937;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 3px solid #3b82f6;
+}
+
+.dark .template-checklist .ProseMirror::before {
+    color: #f3f4f6;
+    border-bottom-color: #60a5fa;
+}
+
+/* ============================================ */
+/* MONTHLY PLANNER TEMPLATE */
+/* ============================================ */
+.template-monthly-planner .ProseMirror {
+    padding: 24px;
+    background-image:
+        linear-gradient(to right, var(--grid-color-light) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--grid-color-light) 1px, transparent 1px);
+    background-size: calc(100% / 7) 120px;
+    background-attachment: local;
+}
+
+/* ============================================ */
+/* WEEKLY PLANNER TEMPLATE */
+/* ============================================ */
+.template-weekly-planner .ProseMirror {
+    padding: 24px;
+    background-image: repeating-linear-gradient(transparent,
+            transparent 119px,
+            #3b82f6 119px,
+            #3b82f6 120px);
+    background-size: 100% 120px;
+    background-attachment: local;
+}
+
+.dark .template-weekly-planner .ProseMirror {
+    background-image: repeating-linear-gradient(transparent,
+            transparent 119px,
+            #60a5fa 119px,
+            #60a5fa 120px);
+}
+
+/* ============================================ */
+/* CALENDAR LAYOUT TEMPLATE */
+/* ============================================ */
+.template-calendar .ProseMirror {
+    padding: 24px;
+    background-image:
+        linear-gradient(to right, var(--grid-color-light) 2px, transparent 2px),
+        linear-gradient(to bottom, var(--grid-color-light) 2px, transparent 2px);
+    background-size: calc(100% / 7) 100px;
+    background-attachment: local;
+}
+
+/* ============================================ */
+/* CUSTOM IMAGE TEMPLATE */
+/* ============================================ */
+.template-custom-image .ProseMirror {
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: local;
+}
+
+/* ============================================ */
+/* PRINT STYLES */
+/* ============================================ */
+@media print {
+    .template-container .ProseMirror {
+        background-color: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+}
