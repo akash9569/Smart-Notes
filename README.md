@@ -1,152 +1,226 @@
-# Smart Notes App 📝✨
+![Smart Notes Banner](https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=180&section=header&text=Smart%20Notes&fontSize=42&fontColor=fff&animation=twinkling&fontAlignY=32&desc=Your%20All-in-One%20Productivity%20Workspace&descAlignY=52&descSize=18)
 
-![License](https://img.shields.io/badge/License-MIT-blue.svg)
+<p align="center">
+  <a href="#-key-features">Features</a> •
+  <a href="#-demo">Demo</a> •
+  <a href="#-installation">Installation</a> •
+  <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-author">Author</a>
+</p>
 
-A powerful, all-in-one productivity workspace designed to help you organize your life. Smart Notes App combines intelligent note-taking, task management, habit tracking, and financial monitoring into a single, beautiful interface.
-
-![Dashboard Preview](screenshots/dashboard.png)
-*A glimpse of your detailed productivity dashboard.*
-
-## 🚀 Features
-
-### 🧠 Intelligent Note-Taking
-- **Rich Text Editor**: Format notes with ease using a powerful editor powered by Tiptap.
-- **AI-Powered Insights**: Generate summaries and get intelligent suggestions for your content.
-- **Notebooks & Tags**: Organize your thoughts with nested notebooks and custom tags.
-- **Sticky Notes**: Quick access to fleeting thoughts and reminders.
-
-### ✅ Advanced Task Management
-- **Kanban & List Views**: Manage tasks your way.
-- **Priority Sorting**: Focus on what matters with Low, Medium, and High priority levels.
-- **Calendar Integration**: Visualize your schedule and deadlines.
-
-### 📊 Life Management Tools
-- **Habit Tracker**: Build and maintain positive habits with streak tracking and analytics.
-- **Expense Tracker**: Monitor your income and expenses with visual charts and budget goals.
-- **Loan Manager**: Keep track of borrowed and lent money with due date reminders.
-
-### 🎨 Personalization
-- **Gallery**: Upload and manage personal images.
-- **Custom Profile**: Set your profile picture and personalize your workspace.
-- **Dark Mode**: Sleek dark theme for comfortable night-time usage.
+<p align="center">
+  <img src="https://img.shields.io/badge/React-18.3-blue?logo=react" alt="React"/>
+  <img src="https://img.shields.io/badge/Node.js-18+-green?logo=node.js" alt="Node.js"/>
+  <img src="https://img.shields.io/badge/MongoDB-Database-green?logo=mongodb" alt="MongoDB"/>
+  <img src="https://img.shields.io/badge/Tailwind-CSS-38B2AC?logo=tailwind-css" alt="Tailwind"/>
+  <img src="https://img.shields.io/badge/License-MIT-yellow" alt="License"/>
+</p>
 
 ---
 
-## 🛠️ Tech Stack
+## 🎬 Demo
 
-This project is built using the **MERN Stack** with modern tooling:
+<p align="center">
+  <img src="screenshots/dashboard.png" alt="Dashboard Preview" width="700"/>
+</p>
 
-- **Frontend**: 
-  - [React](https://reactjs.org/) (Vite)
-  - [Tailwind CSS](https://tailwindcss.com/) for styling
-  - [Recharts](https://recharts.org/) for analytics visuals
-  - [Lucide React](https://lucide.dev/) for icons
+> **Smart Notes** is a powerful MERN stack productivity app that combines note-taking, task management, habit tracking, expense monitoring, and journaling — all in one beautiful dark-themed interface.
 
-- **Backend**:
-  - [Node.js](https://nodejs.org/) & [Express](https://expressjs.com/)
-  - [MongoDB](https://mongodb.com/) (Mongoose)
-  - [JWT](https://jwt.io/) for secure authentication
-  - [Cloudinary](https://cloudinary.com/) for scalable image storage (with local fallback)
+---
+
+## ⚡ Key Features
+
+```
+📝 NOTES & NOTEBOOKS          ✅ TASK MANAGEMENT           📊 LIFE TRACKING
+├─ Rich Text Editor           ├─ Kanban Board              ├─ Habit Tracker
+├─ AI Summaries               ├─ Priority Levels           ├─ Expense Manager
+├─ Nested Notebooks           ├─ Calendar View             ├─ Loan Tracker
+├─ Custom Tags                ├─ Due Reminders             ├─ Budget Goals
+└─ Templates                  └─ List View                 └─ Analytics
+
+🗒️ QUICK CAPTURE              📔 JOURNALING                🎨 PERSONALIZATION
+├─ Sticky Notes               ├─ Daily Entries             ├─ Dark Mode
+├─ Fleeting Thoughts          ├─ Mood Tracking             ├─ Custom Profile
+└─ Quick Access               └─ Reflections               └─ Image Gallery
+```
 
 ---
 
 ## 📸 Screenshots
 
-| **Dashboard** | **Notes Editor** |
-|:---:|:---:|
+| Dashboard | Notes Editor |
+|:---------:|:------------:|
 | ![Dashboard](screenshots/dashboard.png) | ![Notes](screenshots/notes.png) |
-| **Task Board** | **Habit Tracker** |
-| ![Tasks](screenshots/tasks.png) | ![Habits](screenshots/habits.png) |
-| **Expenses** | **Profile** |
-| ![Expenses](screenshots/expenses.png) | ![Profile](screenshots/profile.png) |
-| **Notebooks** | **Sticky Notes** |
-| ![Notebooks](screenshots/notebook.png) | ![Sticky Notes](screenshots/sticky.png) |
-| **Templates** | **Calendar** |
-| ![Templates](screenshots/templates.png) | ![Calendar](screenshots/calendar.png) |
-| **Journal** |  |
-| ![Journal](screenshots/journal.png) |  |
 
-> *Please add your screenshots to the `screenshots` folder with the names above!*
+| Task Board | Habit Tracker |
+|:----------:|:-------------:|
+| ![Tasks](screenshots/tasks.png) | ![Habits](screenshots/habits.png) |
+
+| Expense Tracker | Calendar |
+|:---------------:|:--------:|
+| ![Expenses](screenshots/expenses.png) | ![Calendar](screenshots/calendar.png) |
+
+| Notebooks | Sticky Notes |
+|:---------:|:------------:|
+| ![Notebooks](screenshots/notebook.png) | ![Sticky](screenshots/sticky.png) |
+
+| Journal | Templates |
+|:-------:|:---------:|
+| ![Journal](screenshots/journal.png) | ![Templates](screenshots/templates.png) |
+
+<p align="center">
+  <img src="screenshots/profile.png" alt="Profile" width="500"/>
+  <br/>
+  <em>User Profile</em>
+</p>
 
 ---
 
-## 🚀 Getting Started
+## 🛠️ Tech Stack
 
-Follow these steps to set up the project locally.
+<table align="center">
+  <tr>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=react" width="48" height="48" alt="React" />
+      <br>React
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=vite" width="48" height="48" alt="Vite" />
+      <br>Vite
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=tailwind" width="48" height="48" alt="Tailwind" />
+      <br>Tailwind
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=nodejs" width="48" height="48" alt="Node.js" />
+      <br>Node.js
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=express" width="48" height="48" alt="Express" />
+      <br>Express
+    </td>
+    <td align="center" width="96">
+      <img src="https://skillicons.dev/icons?i=mongodb" width="48" height="48" alt="MongoDB" />
+      <br>MongoDB
+    </td>
+  </tr>
+</table>
+
+**Frontend:** React 18 • Vite • Tailwind CSS • Tiptap Editor • Recharts • Lucide Icons
+
+**Backend:** Node.js • Express • MongoDB • Mongoose • JWT Auth • Cloudinary • OpenAI
+
+---
+
+## 🚀 Installation
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- MongoDB (Local or Atlas connection string)
-- NPM or Yarn
+- Node.js 18+
+- MongoDB
+- npm or yarn
 
-### Installation
+### Quick Start
 
-1.  **Clone the repository**
-    ```bash
-    git clone https://github.com/akash9569/Smart-Notes.git
-    cd smart-notes-app
-    ```
+```bash
+# Clone the repo
+git clone https://github.com/akash9569/Smart-Notes.git
+cd Smart-Notes
 
-2.  **Install Backend Dependencies**
-    ```bash
-    cd backend
-    npm install
-    ```
+# Install backend
+cd backend && npm install
 
-3.  **Install Frontend Dependencies**
-    ```bash
-    cd ../frontend
-    npm install --legacy-peer-deps
-    ```
+# Install frontend
+cd ../frontend && npm install --legacy-peer-deps
+```
 
-4.  **Environment Configuration**
-    Create a `.env` file in the `backend` directory with the following variables:
-    ```env
-    PORT=5001
-    MONGODB_URI=mongodb://localhost:27017/smart-notes
-    JWT_SECRET=your_jwt_secret
-    JWT_REFRESH_SECRET=your_refresh_secret
+### Environment Setup
 
-    # Optional: Cloudinary (Images will save locally if skipped)
-    CLOUDINARY_CLOUD_NAME=your_cloud_name
-    CLOUDINARY_API_KEY=your_api_key
-    CLOUDINARY_API_SECRET=your_api_secret
-    ```
+Create `backend/.env`:
 
-5.  **Run the App**
-    You need to run both backend and frontend servers.
+```env
+PORT=5001
+MONGODB_URI=mongodb://localhost:27017/smart-notes
+JWT_SECRET=your_secret_key
+JWT_REFRESH_SECRET=your_refresh_secret
 
-    *Terminal 1 (Backend):*
-    ```bash
-    cd backend
-    npm run dev
-    ```
+# Optional
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+```
 
-    *Terminal 2 (Frontend):*
-    ```bash
-    cd frontend
-    npm run dev
-    ```
+### Run the App
 
-6.  **Open in Browser**
-    Visit `http://localhost:5173` to see the app in action!
+```bash
+# Terminal 1 - Backend
+cd backend && npm run dev
+
+# Terminal 2 - Frontend
+cd frontend && npm run dev
+```
+
+🌐 Open **http://localhost:5173**
+
+---
+
+## 📂 Project Structure
+
+```
+Smart-Notes/
+│
+├── 🎨 frontend/
+│   ├── src/
+│   │   ├── components/    # UI Components
+│   │   ├── pages/         # App Pages
+│   │   ├── hooks/         # Custom Hooks
+│   │   └── utils/         # Utilities
+│   └── package.json
+│
+├── ⚙️ backend/
+│   ├── src/
+│   │   ├── controllers/   # Route Handlers
+│   │   ├── models/        # Database Models
+│   │   ├── routes/        # API Routes
+│   │   └── middleware/    # Auth & Validation
+│   └── package.json
+│
+└── 📷 screenshots/        # App Screenshots
+```
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+1. Fork the project
+2. Create your branch (`git checkout -b feature/NewFeature`)
+3. Commit changes (`git commit -m 'Add NewFeature'`)
+4. Push to branch (`git push origin feature/NewFeature`)
 5. Open a Pull Request
+
+---
 
 ## 👤 Author
 
-**Designed & Developed by [Akash Singh](https://github.com/akash9569)**
+<p align="center">
+  <img src="https://github.com/akash9569.png" width="100" style="border-radius: 50%"/>
+  <br/>
+  <strong>Akash Singh</strong>
+  <br/><br/>
+  <a href="https://github.com/akash9569">
+    <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
+  </a>
+  <a href="https://www.linkedin.com/in/akash-singh-a69213242/">
+    <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
+  </a>
+</p>
+
+---
 
 ## 📄 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the **MIT License**. See [LICENSE](LICENSE) for more information.
+
+---
+
+![Footer](https://capsule-render.vercel.app/api?type=waving&color=gradient&customColorList=6,11,20&height=100&section=footer)
