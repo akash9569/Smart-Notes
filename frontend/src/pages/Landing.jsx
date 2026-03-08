@@ -23,7 +23,7 @@ const Landing = () => {
             <div className="min-h-screen bg-[#121212] text-white relative flex flex-col font-sans overflow-x-hidden">
                 {/* Header (Navbar) */}
                 <header className="fixed top-0 left-0 right-0 z-40 bg-[#121212]/80 backdrop-blur-md border-b border-gray-800 transition-all duration-300">
-                    <div className="w-full px-6 md:px-12 lg:px-20 h-20 flex justify-between items-center">
+                    <div className="w-full px-6 md:px-12 lg:px-10 h-20 flex justify-between items-center">
                         <div className="flex items-center space-x-3 cursor-pointer group" onClick={() => scrollToSection('home')}>
                             <img src="/logo.png" alt="Smart Notes Logo" className="w-12 h-12 object-contain rounded-xl group-hover:scale-105 transition-transform shadow-lg" />
                             <span className="text-2xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-300 to-slate-400">

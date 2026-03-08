@@ -21,8 +21,9 @@
 ## 🎬 Demo
 
 <p align="center">
-  <img src="screenshots/dashboard.png" alt="Dashboard Preview" width="700"/>
+  <img src="screenshots/landing.png" alt="Dashboard Preview" width="700"/>
 </p>
+
 
 > **Smart Notes** is a powerful MERN stack productivity app that combines note-taking, task management, habit tracking, expense monitoring, and journaling — all in one beautiful dark-themed interface.
 
@@ -51,6 +52,18 @@
 | Dashboard | Notes Editor |
 |:---------:|:------------:|
 | ![Dashboard](screenshots/dashboard.png) | ![Notes](screenshots/notes.png) |
+
+| Contact us | Detaile of Project |
+|:---------:|:------------:|
+| ![Contact](screenshots/contact.png) | ![Details](screenshots/data.png) |
+
+| About our Project | Registration Page |
+|:---------:|:------------:|
+| ![About](screenshots/data1.png) | ![Registration](screenshots/registration.png) |
+
+| Login Page | Reset Password |
+|:---------:|:------------:|
+| ![Login](screenshots/login.png) | ![Reset](screenshots/reset.png) |
 
 | Task Board | Habit Tracker |
 |:----------:|:-------------:|
