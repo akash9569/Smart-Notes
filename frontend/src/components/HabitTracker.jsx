@@ -11,74 +11,50 @@ import HabitStats from './habits/HabitStats';
 import HabitHeatmap from './habits/HabitHeatmap';
 import HabitAnalytics from './habits/HabitAnalytics';
 
+import { useHabits } from '../context/HabitsContext';
+
 const HabitTracker = () => {
-    const [habits, setHabits] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { habits, loading, createHabit, updateHabit, deleteHabit, toggleCompletion } = useHabits();
     const [view, setView] = useState('weekly'); // 'weekly', 'monthly', 'stats'
     const [currentDate, setCurrentDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedHabit, setSelectedHabit] = useState(null);
 
-    useEffect(() => {
-        fetchHabits();
-    }, []);
-
-    const fetchHabits = async () => {
-        try {
-            const response = await habitsAPI.getHabits();
-            setHabits(response.data);
-        } catch (error) {
-            console.error('Error fetching habits:', error);
-            toast.error('Failed to load habits');
-        } finally {
-            setLoading(false);
-        }
-    };
+    // fetchHabits is handled by context
 
     const handleCreateHabit = async (habitData) => {
         try {
-            const response = await habitsAPI.createHabit(habitData);
-            setHabits([response.data, ...habits]);
+            await createHabit(habitData);
             setIsModalOpen(false);
-            toast.success('Habit created successfully!');
         } catch (error) {
-            console.error('Error creating habit:', error);
-            toast.error('Failed to create habit');
+            // Toast handled in context
         }
     };
 
     const handleUpdateHabit = async (id, updates) => {
         try {
-            const response = await habitsAPI.updateHabit(id, updates);
-            setHabits(habits.map(h => h._id === id ? response.data : h));
+            await updateHabit(id, updates);
             setSelectedHabit(null);
             setIsModalOpen(false);
-            toast.success('Habit updated successfully!');
         } catch (error) {
-            console.error('Error updating habit:', error);
-            toast.error('Failed to update habit');
+            // Toast handled in context
         }
     };
 
     const handleDeleteHabit = async (id) => {
         if (!window.confirm('Are you sure you want to delete this habit?')) return;
         try {
-            await habitsAPI.deleteHabit(id);
-            setHabits(habits.filter(h => h._id !== id));
-            toast.success('Habit deleted');
+            await deleteHabit(id);
         } catch (error) {
-            console.error('Error deleting habit:', error);
-            toast.error('Failed to delete habit');
+            // Toast handled in context
         }
     };
 
     const handleToggleCompletion = async (id, date) => {
         try {
-            const response = await habitsAPI.toggleCompletion(id, date);
-            setHabits(habits.map(h => h._id === id ? response.data : h));
+            await toggleCompletion(id, date);
         } catch (error) {
-            console.error('Error toggling habit:', error);
-            toast.error('Failed to update progress');
+            // Toast handled in context
         }
     };
 
@@ -149,12 +125,12 @@ const HabitTracker = () => {
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
                     </div>
                 ) : (
-                    <div className="max-w-6xl mx-auto space-y-8">
+                    <div className="w-full mx-auto space-y-8">
                         {/* Stats Overview */}
                         <HabitStats habits={habits} />
 
                         {view === 'weekly' && (
-                            <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-sm border border-gray-200 dark:border-[#333] overflow-hidden">
+                            <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-sm border border-gray-200 dark:border-[#333]">
                                 <div className="p-4 border-b border-gray-200 dark:border-[#333] flex items-center justify-between">
                                     <div className="flex items-center gap-4">
                                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Weekly Progress</h2>

@@ -484,7 +484,14 @@ const NotePropertiesPanel = ({ note, onUpdate, onClose }) => {
                 <PropertyGroup label="Template">
                     <select
                         value={note.template || 'blank'}
-                        onChange={(e) => onUpdate({ template: e.target.value })}
+                        onChange={(e) => {
+                            const template = e.target.value;
+                            const isJournal = ['morning-journal', 'night-reflection', 'gratitude-journal'].includes(template);
+                            onUpdate({
+                                template,
+                                ...(isJournal && { isJournal: true })
+                            });
+                        }}
                         className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-[#444] bg-white dark:bg-[#2d2d2d] text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                         <option value="blank">Blank Page</option>
@@ -495,6 +502,11 @@ const NotePropertiesPanel = ({ note, onUpdate, onClose }) => {
                         <option value="monthly-planner">Monthly Planner</option>
                         <option value="weekly-planner">Weekly Planner</option>
                         <option value="checklist">Checklist</option>
+                        <optgroup label="Journaling">
+                            <option value="morning-journal">Morning Journal</option>
+                            <option value="night-reflection">Night Reflection</option>
+                            <option value="gratitude-journal">Gratitude Journal</option>
+                        </optgroup>
                     </select>
                 </PropertyGroup>
 

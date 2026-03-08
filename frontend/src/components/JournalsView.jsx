@@ -62,15 +62,15 @@ const JournalsView = ({ journals, currentNote, onSelectNote, onDeleteNote }) => 
             >
                 {/* Decoration bar */}
                 <div
-                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-pink-400"
+                    className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-gradient-to-b from-indigo-400 to-purple-500 opacity-80"
                 />
 
                 {/* Main content */}
                 <div className="pl-4 pr-3 py-4">
                     {/* Header */}
                     <div className="flex items-start gap-2 mb-2">
-                        <Book className="w-4 h-4 text-pink-400 mt-0.5 flex-shrink-0" />
-                        <h3 className={`font-semibold text-sm flex-1 line-clamp-1 ${!journal.title ? 'text-gray-400 italic' : 'text-gray-900 dark:text-white'
+                        <Book className="w-4 h-4 text-indigo-400 mt-0.5 flex-shrink-0" />
+                        <h3 className={`font-semibold text-sm flex-1 line-clamp-1 ${!journal.title ? 'text-gray-400 italic' : 'text-gray-900 dark:text-slate-200'
                             }`}>
                             {journal.title || 'Untitled Journal'}
                         </h3>
@@ -127,13 +127,14 @@ const JournalsView = ({ journals, currentNote, onSelectNote, onDeleteNote }) => 
     };
 
     return (
-        <div className="w-full lg:w-[340px] bg-white dark:bg-[#191919] border-r border-gray-200 dark:border-[#333] flex flex-col h-full flex-shrink-0 transition-colors duration-200">
+        <div className="w-full lg:w-[340px] bg-gray-50/50 dark:bg-[#121212] border-r border-gray-200 dark:border-[#2a2a2a] flex flex-col h-full flex-shrink-0 transition-colors duration-200">
             {/* Header */}
-            <div className="p-4 border-b border-gray-200 dark:border-[#333]">
-                <div className="flex items-center justify-between mb-4">
+            <div className="p-4 border-b border-gray-200 dark:border-[#2a2a2a]">
+                <div className="flex items-center justify-between mb-4 mt-2">
                     <div className="flex items-center space-x-2">
-                        <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">Journals</h2>
-                        <span className="text-sm text-gray-500 dark:text-gray-400 font-medium">{journals.length}</span>
+                        <Book className="w-5 h-5 text-indigo-500" />
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-slate-200 tracking-tight">Journals</h2>
+                        <span className="text-sm px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400 font-medium">{journals.length}</span>
                     </div>
                     <div className="relative">
                         <button

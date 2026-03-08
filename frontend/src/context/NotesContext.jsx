@@ -28,8 +28,13 @@ export const NotesProvider = ({ children }) => {
     const fetchNotes = async () => {
         setLoading(true);
         try {
-            const response = await notesAPI.getNotes();
-            const allNotes = response.data.data.notes;
+            let allNotes = [];
+            if (user?.isOffline) {
+                allNotes = JSON.parse(localStorage.getItem('offline_notes') || '[]');
+            } else {
+                const response = await notesAPI.getNotes();
+                allNotes = response.data.data.notes;
+            }
 
             // Separate journals and regular notes
             const regularNotes = allNotes.filter(note => !note.isJournal);
@@ -46,8 +51,22 @@ export const NotesProvider = ({ children }) => {
 
     const createNote = async (data) => {
         try {
-            const response = await notesAPI.createNote(data);
-            const newNote = response.data.data.note;
+            let newNote;
+            if (user?.isOffline) {
+                newNote = {
+                    ...data,
+                    _id: `offline_${Date.now()}`,
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    user: user._id
+                };
+                const existingNotes = JSON.parse(localStorage.getItem('offline_notes') || '[]');
+                const updatedNotes = [newNote, ...existingNotes];
+                localStorage.setItem('offline_notes', JSON.stringify(updatedNotes));
+            } else {
+                const response = await notesAPI.createNote(data);
+                newNote = response.data.data.note;
+            }
 
             if (newNote.isJournal) {
                 setJournals([newNote, ...journals]);
@@ -65,8 +84,21 @@ export const NotesProvider = ({ children }) => {
 
     const updateNote = async (id, data) => {
         try {
-            const response = await notesAPI.updateNote(id, data);
-            const updatedNote = response.data.data.note;
+            let updatedNote;
+            if (user?.isOffline) {
+                const existingNotes = JSON.parse(localStorage.getItem('offline_notes') || '[]');
+                const index = existingNotes.findIndex(n => n._id === id);
+                if (index !== -1) {
+                    updatedNote = { ...existingNotes[index], ...data, updatedAt: new Date().toISOString() };
+                    existingNotes[index] = updatedNote;
+                    localStorage.setItem('offline_notes', JSON.stringify(existingNotes));
+                } else {
+                    throw new Error('Note not found locally');
+                }
+            } else {
+                const response = await notesAPI.updateNote(id, data);
+                updatedNote = response.data.data.note;
+            }
 
             if (updatedNote.isJournal) {
                 setJournals(journals.map(j => j._id === id ? updatedNote : j));
@@ -86,7 +118,13 @@ export const NotesProvider = ({ children }) => {
 
     const deleteNote = async (id) => {
         try {
-            await notesAPI.deleteNote(id);
+            if (user?.isOffline) {
+                const existingNotes = JSON.parse(localStorage.getItem('offline_notes') || '[]');
+                const filteredNotes = existingNotes.filter(n => n._id !== id);
+                localStorage.setItem('offline_notes', JSON.stringify(filteredNotes));
+            } else {
+                await notesAPI.deleteNote(id);
+            }
 
             // Try removing from both to be safe, though ID is unique
             setNotes(prevNotes => prevNotes.filter(n => n._id !== id));
@@ -103,6 +141,10 @@ export const NotesProvider = ({ children }) => {
     };
 
     const shareNote = async (id, email, permission) => {
+        if (user?.isOffline) {
+            toast.error('Sharing is not available offline');
+            return;
+        }
         try {
             const response = await notesAPI.shareNote(id, { email, permission });
             const updatedNote = response.data.data.note;
@@ -127,8 +169,14 @@ export const NotesProvider = ({ children }) => {
 
     const getJournal = async (date) => {
         try {
-            const response = await notesAPI.getNotes();
-            const allNotes = response.data.data.notes;
+            let allNotes = [];
+            if (user?.isOffline) {
+                allNotes = JSON.parse(localStorage.getItem('offline_notes') || '[]');
+            } else {
+                const response = await notesAPI.getNotes();
+                allNotes = response.data.data.notes;
+            }
+
             const journal = allNotes.find(note =>
                 note.isJournal &&
                 new Date(note.createdAt).toDateString() === new Date(date).toDateString()

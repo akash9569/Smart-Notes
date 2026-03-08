@@ -21,7 +21,9 @@ import {
     Rocket,
     BrainCircuit,
     Sparkles,
-    ArrowRight
+    ArrowRight,
+    Sun,
+    Moon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -286,6 +288,90 @@ const templates = [
                     <p style="color: #1e40af; font-style: italic; margin: 0 0 8px 0;">One thing I'm looking forward to:</p>
                     <p></p>
                 </div>
+            </div>
+        `
+    },
+    {
+        id: 'morning-journal',
+        title: 'Morning Journal',
+        description: 'Set your intentions and start the day right.',
+        icon: Sun,
+        category: 'personal',
+        accent: 'yellow',
+        content: `
+            <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+                <h1 style="color: #eab308; border-bottom: 2px solid #eab308; padding-bottom: 10px;">☀️ Morning Journal</h1>
+                <p style="color: #666;"><strong>Date:</strong> ${new Date().toLocaleDateString()}</p>
+                
+                <h3 style="color: #a16207; background-color: #fef9c3; padding: 8px; border-radius: 4px;">🎯 Intentions for Today</h3>
+                <ul style="list-style-type: none; padding-left: 0;">
+                    <li style="margin-bottom: 10px; border-bottom: 1px dashed #fde047; padding-bottom: 5px;">1. </li>
+                    <li style="margin-bottom: 10px; border-bottom: 1px dashed #fde047; padding-bottom: 5px;">2. </li>
+                    <li style="margin-bottom: 10px; border-bottom: 1px dashed #fde047; padding-bottom: 5px;">3. </li>
+                </ul>
+
+                <h3 style="color: #a16207; background-color: #fef9c3; padding: 8px; border-radius: 4px; margin-top: 20px;">🙏 Gratitude</h3>
+                <p>I am grateful for...</p>
+                <p><br></p>
+
+                <h3 style="color: #a16207; background-color: #fef9c3; padding: 8px; border-radius: 4px; margin-top: 20px;">💪 Affirmation</h3>
+                <p style="font-style: italic;">"I am capable and ready for whatever today brings."</p>
+            </div>
+        `
+    },
+    {
+        id: 'gratitude-journal',
+        title: 'Gratitude Journal',
+        description: 'Focus on the positive aspects of your life.',
+        icon: Heart,
+        category: 'personal',
+        accent: 'pink',
+        content: `
+            <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+                <h1 style="color: #ec4899; border-bottom: 2px solid #ec4899; padding-bottom: 10px;">💖 Gratitude Journal</h1>
+                
+                <div style="background-color: #fdf2f8; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <p style="margin: 0;">"Gratitude turns what we have into enough."</p>
+                </div>
+
+                <h3 style="color: #be185d; background-color: #fce7f3; padding: 8px; border-radius: 4px;">Three Things I'm Grateful For</h3>
+                <ol>
+                    <li style="margin-bottom: 15px;"></li>
+                    <li style="margin-bottom: 15px;"></li>
+                    <li style="margin-bottom: 15px;"></li>
+                </ol>
+
+                <h3 style="color: #be185d; background-color: #fce7f3; padding: 8px; border-radius: 4px; margin-top: 20px;">🌟 Highlight of the Day</h3>
+                <p><br></p>
+            </div>
+        `
+    },
+    {
+        id: 'night-reflection',
+        title: 'Night Reflection',
+        description: 'Review your day and clear your mind before sleep.',
+        icon: Moon,
+        category: 'personal',
+        accent: 'indigo',
+        content: `
+            <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
+                <h1 style="color: #6366f1; border-bottom: 2px solid #6366f1; padding-bottom: 10px;">🌙 Night Reflection</h1>
+                
+                <h3 style="color: #4338ca; background-color: #e0e7ff; padding: 8px; border-radius: 4px;">Wins of the Day</h3>
+                <ul style="list-style-type: none; padding-left: 0;">
+                    <li style="margin-bottom: 5px;">✨ </li>
+                    <li style="margin-bottom: 5px;">✨ </li>
+                </ul>
+
+                <h3 style="color: #4338ca; background-color: #e0e7ff; padding: 8px; border-radius: 4px; margin-top: 20px;">Challenges Faced</h3>
+                <p><br></p>
+
+                <h3 style="color: #4338ca; background-color: #e0e7ff; padding: 8px; border-radius: 4px; margin-top: 20px;">Tomorrow's Priorities</h3>
+                <ol>
+                    <li></li>
+                    <li></li>
+                    <li></li>
+                </ol>
             </div>
         `
     },
@@ -886,6 +972,7 @@ const getAccentStyles = (color) => {
 const TemplatesView = ({ onCreateNote }) => {
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedCategory, setSelectedCategory] = useState('all');
+    const [previewTemplate, setPreviewTemplate] = useState(null); // null = modal closed
 
     const filteredTemplates = templates.filter(template => {
         const matchesSearch = template.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -896,13 +983,23 @@ const TemplatesView = ({ onCreateNote }) => {
 
     const featuredTemplates = templates.filter(t => t.featured);
 
-    const handleUseTemplate = async (template) => {
+    // Opens the preview modal — does NOT create a note
+    const handlePreviewTemplate = (template) => {
+        setPreviewTemplate(template);
+    };
+
+    // Actually creates the note — only called from inside the modal
+    const handleUseTemplate = async () => {
+        if (!previewTemplate) return;
         try {
             await onCreateNote({
-                title: `${template.title} - ${new Date().toLocaleDateString()} `,
-                content: template.content
+                title: `${previewTemplate.title} - ${new Date().toLocaleDateString()}`,
+                content: previewTemplate.content,
+                isJournal: previewTemplate.id.includes('journal') || previewTemplate.category === 'journal',
+                template: previewTemplate.id
             });
-            toast.success(`Created note from ${template.title} `);
+            toast.success(`Note created from "${previewTemplate.title}"`);
+            setPreviewTemplate(null);
         } catch (error) {
             console.error('Failed to use template', error);
             toast.error('Failed to create note');
@@ -911,7 +1008,74 @@ const TemplatesView = ({ onCreateNote }) => {
 
     return (
         <div className="flex-1 bg-gray-50 dark:bg-[#121212] p-4 sm:p-8 overflow-y-auto h-full">
-            <div className="max-w-7xl mx-auto space-y-8">
+
+            {/* ── Preview Modal ── */}
+            {previewTemplate && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                    onClick={() => setPreviewTemplate(null)}
+                >
+                    {/* Backdrop */}
+                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+
+                    {/* Modal Panel */}
+                    <div
+                        className="relative z-10 bg-white dark:bg-[#1a1a1a] rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800 shrink-0">
+                            <div className="flex items-center gap-3">
+                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${getAccentStyles(previewTemplate.accent)}`}>
+                                    <previewTemplate.icon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">{previewTemplate.title}</h2>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400">{previewTemplate.description}</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setPreviewTemplate(null)}
+                                className="p-2 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+
+                        {/* Template Preview */}
+                        <div className="flex-1 overflow-y-auto p-6">
+                            <div
+                                className="prose prose-sm max-w-none dark:prose-invert"
+                                dangerouslySetInnerHTML={{ __html: previewTemplate.content }}
+                            />
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="flex items-center justify-between px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#111] shrink-0">
+                            <p className="text-sm text-gray-500 dark:text-gray-400">
+                                Preview only — no note created yet
+                            </p>
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={() => setPreviewTemplate(null)}
+                                    className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleUseTemplate}
+                                    className="px-5 py-2 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-500 text-white transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/20"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Use This Template
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className="max-w-8xl mx-auto space-y-8">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                     <div>
@@ -951,7 +1115,7 @@ const TemplatesView = ({ onCreateNote }) => {
                                 return (
                                     <div
                                         key={template.id}
-                                        onClick={() => handleUseTemplate(template)}
+                                        onClick={() => handlePreviewTemplate(template)}
                                         className="relative overflow-hidden bg-white dark:bg-[#1e1e1e] rounded-2xl p-6 border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-md transition-all cursor-pointer group"
                                     >
                                         <div className={`absolute -right-6 -bottom-6 opacity-[0.03] group-hover:opacity-10 transition-all transform rotate-12`}>
@@ -1000,7 +1164,7 @@ const TemplatesView = ({ onCreateNote }) => {
                         return (
                             <div
                                 key={template.id}
-                                onClick={() => handleUseTemplate(template)}
+                                onClick={() => handlePreviewTemplate(template)}
                                 className="group relative bg-white dark:bg-[#1e1e1e] rounded-2xl p-6 border border-gray-200 dark:border-gray-800 hover:border-blue-500/50 dark:hover:border-blue-500/50 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col h-full"
                             >
                                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 transition-transform group-hover:scale-110 duration-300 ${accentStyle}`}>

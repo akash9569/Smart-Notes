@@ -18,7 +18,8 @@ import {
     Settings,
     Zap,
     X,
-    DollarSign
+    DollarSign,
+    Clock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ProfilePopover from './ProfilePopover';
@@ -30,6 +31,7 @@ const Sidebar = ({ activeView, setActiveView, onCreateNote, isOpen, onClose }) =
 
     const menuItems = [
         { id: 'home', label: 'Home', icon: Home },
+        { id: 'timeline', label: 'Timeline', icon: Clock },
         { id: 'shortcuts', label: 'Shortcuts', icon: Star },
         { id: 'notes', label: 'Notes', icon: FileText },
         { id: 'tasks', label: 'Tasks', icon: CheckCircle },

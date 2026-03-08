@@ -9,11 +9,17 @@ import { format, isToday, isPast, startOfDay, endOfDay } from 'date-fns';
 import { expandRecurringTasks } from '../utils/taskUtils';
 import { toggleTaskCompletion } from '../utils/taskHelpers';
 
+import { useTasks } from '../context/TasksContext';
+import { useNotes } from '../context/NotesContext';
+
+import { useLocation } from 'react-router-dom';
+
 const TasksView = () => {
     const { user, updateUser } = useAuth();
-    const [tasks, setTasks] = useState([]);
-    const [notes, setNotes] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { tasks, loading, createTask, updateTask, deleteTask, toggleTask } = useTasks();
+    const { notes } = useNotes();
+    const location = useLocation();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState('Today');
     const [selectedTask, setSelectedTask] = useState(null);
@@ -22,25 +28,18 @@ const TasksView = () => {
 
     const [editingTask, setEditingTask] = useState(null);
 
+    // Handle navigation actions
     useEffect(() => {
-        fetchData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            const [tasksRes, notesRes] = await Promise.all([
-                tasksAPI.getTasks(),
-                notesAPI.getNotes()
-            ]);
-            setTasks(tasksRes.data.data.tasks);
-            setNotes(notesRes.data.data.notes);
-        } catch (error) {
-            console.error('Failed to fetch data', error);
-            toast.error('Failed to load data');
-        } finally {
-            setLoading(false);
+        if (location.state?.action === 'create') {
+            setIsModalOpen(true);
+            // Optional: convert state to prevent reopening on reload? 
+            // In React Router v6, converting state is harder without navigate replacement.
+            // But checking valid action is enough.
         }
-    };
+    }, [location]);
+
+    // fetchData is no longer needed as Contexts handle it
+
 
     const getFilteredTasks = () => {
         let filtered = tasks;
@@ -97,21 +96,19 @@ const TasksView = () => {
 
     const handleCreateTask = async (taskData) => {
         try {
-            const response = await tasksAPI.createTask(taskData);
-            setTasks([response.data.data.task, ...tasks]);
-            toast.success('Task added');
+            await createTask(taskData);
+            // Toast handled in context
             setIsModalOpen(false);
         } catch (error) {
-            toast.error('Failed to add task');
+            // Error toast handled in context
         }
     };
 
     const handleUpdateTask = async (id, taskData) => {
         try {
-            const response = await tasksAPI.updateTask(id, taskData);
-            setTasks(tasks.map(t => t._id === id ? response.data.data.task : t));
+            const updatedTask = await updateTask(id, taskData);
             if (selectedTask?._id === id) {
-                setSelectedTask(response.data.data.task);
+                setSelectedTask(updatedTask);
             }
             // Close modal if it was open for editing
             if (isModalOpen) {
@@ -119,7 +116,7 @@ const TasksView = () => {
                 setEditingTask(null);
             }
         } catch (error) {
-            toast.error('Failed to update task');
+            // Error toast handled in context
         }
     };
 
@@ -128,50 +125,18 @@ const TasksView = () => {
         setIsModalOpen(true);
     };
 
-    const toggleTask = async (e, id, completed) => {
+    const handleToggleTask = async (e, id, completed) => {
         e.stopPropagation();
-
-        // Find the full task object (could be an instance from expanded list)
-        const taskToToggle = tasks.find(t => t._id === id);
-
-        if (!taskToToggle) return;
-
-        try {
-            // Optimistic update
-            setTasks(tasks.map(t => t._id === id ? { ...t, completed: !completed } : t));
-
-            // Call helper - pass the task object and the list of ALL tasks (which contains it)
-            // Note: If 'tasks' state contains expanded instances, we might need the original list.
-            // But here 'tasks' is populated from API which returns raw tasks (unless filtered/expanded).
-            // For 'Today' view, we will need to ensure we pass the right context.
-            // Actually, tasksAPI.getTasks() returns raw tasks. 'tasks' state holds raw tasks.
-            // If we are in 'Today' view, 'filteredTasks' will hold expanded instances.
-            // We need to fetch the raw list or assume 'tasks' is sufficient if it contains the original.
-
-            const response = await toggleTaskCompletion(taskToToggle, tasks);
-
-            if (response.data.data.user) {
-                updateUser(response.data.data.user);
-            }
-
-            // If it was a recurring task, we should probably refetch to ensure instances are clear
-            fetchData();
-        } catch (error) {
-            console.error('Failed to toggle task', error);
-            toast.error('Failed to update task');
-            fetchData();
-        }
+        await toggleTask(id, completed);
     };
 
-    const deleteTask = async (id) => {
+    const handleDeleteTask = async (id) => {
         console.log('TasksView: Deleting task', id);
         try {
-            await tasksAPI.deleteTask(id);
-            setTasks(tasks.filter(t => t._id !== id));
+            await deleteTask(id);
             if (selectedTask?._id === id) setSelectedTask(null);
-            toast.success('Task deleted');
         } catch (error) {
-            toast.error('Failed to delete task');
+            // Error toast handled in context
         }
     };
 
@@ -192,7 +157,6 @@ const TasksView = () => {
                             <h1 className="text-3xl font-bold tracking-tight mb-1">Tasks</h1>
                             <p className="text-gray-500 dark:text-gray-400">Manage your daily goals and projects.</p>
                         </div>
-                        {/* Streak Badge */}
                         {/* Streak Badge */}
                         <div className="flex items-center gap-3">
                             <div className="flex items-center gap-3 bg-orange-50 dark:bg-orange-900/10 border border-orange-100 dark:border-orange-800/30 rounded-xl px-4 py-2 w-fit">
@@ -308,7 +272,7 @@ const TasksView = () => {
                                             }`}
                                     >
                                         <button
-                                            onClick={(e) => toggleTask(e, task._id, task.completed)}
+                                            onClick={(e) => handleToggleTask(e, task._id, task.completed)}
                                             className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0 border-gray-300 dark:border-gray-600 hover:border-blue-500`}
                                         >
                                         </button>
@@ -365,7 +329,7 @@ const TasksView = () => {
                                                 }`}
                                         >
                                             <button
-                                                onClick={(e) => toggleTask(e, task._id, task.completed)}
+                                                onClick={(e) => handleToggleTask(e, task._id, task.completed)}
                                                 className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all shrink-0 bg-blue-500 border-blue-500 text-white`}
                                             >
                                                 <CheckCircle className="w-3.5 h-3.5" />
@@ -393,7 +357,7 @@ const TasksView = () => {
                             task={selectedTask}
                             onClose={() => setSelectedTask(null)}
                             onUpdate={(updatedTask) => handleUpdateTask(updatedTask._id, updatedTask)}
-                            onDelete={deleteTask}
+                            onDelete={handleDeleteTask}
                             onEdit={handleEditTask}
                         />
                     </div>

@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import {
     DollarSign, TrendingUp, TrendingDown, Calendar, PieChart, Plus, Trash2,
     Lightbulb, CreditCard, ArrowUpRight, ArrowDownRight, Wallet, Activity,
-    MoreHorizontal, Filter, Users, Clock, CheckCircle, AlertCircle
+    MoreHorizontal, Filter, Users, Clock, CheckCircle, AlertCircle, X
 } from 'lucide-react';
 import { expensesAPI, loansAPI } from '../api';
 import toast from 'react-hot-toast';
-import { format } from 'date-fns';
+import { format, parseISO, startOfWeek, startOfMonth } from 'date-fns';
 import {
     LineChart, Line, AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip, ResponsiveContainer, PieChart as RePieChart, Pie, Cell, Legend
@@ -14,40 +14,33 @@ import {
 
 const COLORS = ['#10B981', '#3B82F6', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#6366F1'];
 
+import { useExpenses } from '../context/ExpensesContext';
+
+import { useLocation } from 'react-router-dom';
+
 const ExpensesView = () => {
-    const [loading, setLoading] = useState(true);
-    const [data, setData] = useState({
-        summary: {
-            totalBalance: 0,
-            monthlyIncome: 0,
-            monthlyExpenses: 0,
-            dailySpending: 0,
-            weeklySpending: 0,
-            remainingMonthlyBalance: 0
-        },
-        charts: {
-            incomeVsExpense: [],
-            balanceHistory: [],
-            categoryPie: []
-        },
-        recentTransactions: []
-    });
+    const {
+        data, loanData, loading,
+        createExpense, deleteExpense, createLoan, deleteLoan, repayLoan,
+        setData, setLoanData, fetchData, fetchLoanData
+    } = useExpenses();
 
-    const [loanData, setLoanData] = useState({
-        loans: [],
-        stats: {
-            totalLent: 0,
-            totalBorrowed: 0,
-            totalLentOutstanding: 0,
-            totalBorrowedOutstanding: 0,
-            returnedThisMonth: 0,
-            paidBackThisMonth: 0
-        }
-    });
+    const location = useLocation();
 
+    // Local UI state
     const [activeTab, setActiveTab] = useState('monthly'); // daily, weekly, monthly
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [modalType, setModalType] = useState('expense'); // 'income', 'expense', 'lent', 'borrowed'
+
+    useEffect(() => {
+        if (location.state?.action === 'add-expense') {
+            setModalType('expense');
+            setIsAddModalOpen(true);
+        } else if (location.state?.action === 'add-income') {
+            setModalType('income');
+            setIsAddModalOpen(true);
+        }
+    }, [location]);
 
     // Loan Modal State
     const [isLoanModalOpen, setIsLoanModalOpen] = useState(false);
@@ -64,9 +57,32 @@ const ExpensesView = () => {
     // Loan Form State
     const [person, setPerson] = useState('');
     const [dueDate, setDueDate] = useState('');
+    // All Transactions Modal State
+    const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+    const [allTransactions, setAllTransactions] = useState([]);
+    const [loadingTransactions, setLoadingTransactions] = useState(false);
 
-    const expenseCategories = ['Food', 'Transport', 'Utilities', 'Entertainment', 'Shopping', 'Health', 'Education', 'Other'];
+    const fetchAllTransactions = async () => {
+        try {
+            setLoadingTransactions(true);
+            const response = await expensesAPI.getExpenses();
+            setAllTransactions(response.data.data.expenses);
+        } catch (error) {
+            console.error('Failed to fetch transactions', error);
+            toast.error('Failed to load transactions');
+        } finally {
+            setLoadingTransactions(false);
+        }
+    };
+
+    const handleViewAll = () => {
+        setIsTransactionsModalOpen(true);
+        fetchAllTransactions();
+    };
+
+
     const incomeCategories = ['Home', 'Salary', 'Freelancing', 'Investment', 'Bonus', 'Gift', 'Other'];
+    const expenseCategories = ['Food', 'Transport', 'Utilities', 'Entertainment', 'Health', 'Education', 'Shopping', 'Other'];
 
     const templates = [
         { name: 'Daily Coffee', amount: 30, category: 'Food', type: 'expense' },
@@ -76,58 +92,65 @@ const ExpensesView = () => {
         { name: 'Home', amount: 5000, category: 'Home', type: 'income' },
     ];
 
-    useEffect(() => {
-        fetchData();
-        fetchLoanData();
-    }, []);
-
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const response = await expensesAPI.getStats();
-            setData(response.data.data);
-        } catch (error) {
-            console.error('Failed to fetch data', error);
-            toast.error('Failed to load dashboard data');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchLoanData = async () => {
-        try {
-            const [loansRes, statsRes] = await Promise.all([
-                loansAPI.getLoans(),
-                loansAPI.getStats()
-            ]);
-            setLoanData({
-                loans: loansRes.data.data.loans,
-                stats: statsRes.data.data
-            });
-        } catch (error) {
-            console.error('Failed to fetch loan data', error);
-        }
-    };
 
     const handleAddTransaction = async (e) => {
         e.preventDefault();
+
+        const expenseData = {
+            amount: Number(amount),
+            category: category || (modalType === 'income' ? 'Home' : 'Other'),
+            description,
+            date,
+            type: modalType,
+            isRecurring
+        };
+
+        if (isRecurring) {
+            expenseData.recurrenceInterval = recurrenceInterval;
+        }
+
+        // OPTIMISTIC UPDATE
+        const tempId = Date.now().toString();
+        const optimisticTransaction = {
+            _id: tempId,
+            ...expenseData,
+            user: 'current-user', // Placeholder
+            createdAt: new Date().toISOString()
+        };
+
+        const previousData = { ...data };
+
+        // Update local state instantly
+        setData(prev => ({
+            ...prev,
+            recentTransactions: [optimisticTransaction, ...prev.recentTransactions].slice(0, 10),
+            summary: {
+                ...prev.summary,
+                totalBalance: modalType === 'income'
+                    ? prev.summary.totalBalance + Number(amount)
+                    : prev.summary.totalBalance - Number(amount),
+                monthlyIncome: modalType === 'income'
+                    ? prev.summary.monthlyIncome + Number(amount)
+                    : prev.summary.monthlyIncome,
+                monthlyExpenses: modalType === 'expense'
+                    ? prev.summary.monthlyExpenses + Number(amount)
+                    : prev.summary.monthlyExpenses
+            }
+        }));
+
+        setIsAddModalOpen(false);
+        resetForm();
+        toast.success(`${modalType === 'income' ? 'Income' : 'Expense'} added!`);
+
         try {
-            await expensesAPI.createExpense({
-                amount: Number(amount),
-                category: category || (modalType === 'income' ? 'Home' : 'Other'),
-                description,
-                date,
-                type: modalType,
-                isRecurring,
-                recurrenceInterval: isRecurring ? recurrenceInterval : null
-            });
-            toast.success(`${modalType === 'income' ? 'Income' : 'Expense'} added!`);
-            setIsAddModalOpen(false);
-            resetForm();
+            await expensesAPI.createExpense(expenseData);
+            // Background fetch to confirm/sync
             fetchData();
         } catch (error) {
+            // ROLLBACK on failure
             console.error('Failed to add transaction', error);
-            toast.error('Failed to add transaction');
+            setData(previousData);
+            toast.error(error.response?.data?.message || 'Failed to add transaction');
         }
     };
 
@@ -139,58 +162,238 @@ const ExpensesView = () => {
                 person,
                 amount: Number(amount),
                 date,
-                dueDate: dueDate || null,
+                dueDate: dueDate || undefined,
                 category: 'Personal', // Default for now
                 description
             });
-            toast.success('Loan record added!');
             setIsLoanModalOpen(false);
             resetForm();
+            toast.success(`${loanModalType === 'lent' ? 'Loan' : 'Borrowing'} recorded!`);
             fetchLoanData();
+            fetchData(); // Refresh main balance as this affects income/expense
         } catch (error) {
             console.error('Failed to add loan', error);
-            toast.error('Failed to add loan');
+            toast.error(error.response?.data?.message || 'Failed to add loan');
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this transaction?')) {
-            try {
-                await expensesAPI.deleteExpense(id);
-                toast.success('Transaction deleted');
-                fetchData();
-            } catch (error) {
-                toast.error('Failed to delete');
+    const handleDelete = (id) => {
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    Delete Transaction?
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Are you sure you want to delete this transaction? This action cannot be undone.
+                </p>
+                <div className="flex gap-2 justify-end mt-2">
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-[#333] hover:bg-gray-200 dark:hover:bg-[#444] transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            await processDeleteTransaction(id);
+                        }}
+                        className="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        ), { duration: Infinity });
+    };
+
+    const processDeleteTransaction = async (id) => {
+        // Check if it's a temporary ID (optimistic transaction)
+        if (id.length < 24) {
+            setData(prev => ({
+                ...prev,
+                recentTransactions: prev.recentTransactions.filter(t => t._id !== id),
+                // Revert summary stats optional but good practice
+            }));
+            toast.success('Transaction deleted');
+            return;
+        }
+
+        // Valid ID: Optimistic UI for delete
+        const previousData = { ...data };
+        const transactionToDelete = data.recentTransactions.find(t => t._id === id);
+
+        // Update UI instantly
+        setData(prev => ({
+            ...prev,
+            recentTransactions: prev.recentTransactions.filter(t => t._id !== id),
+            summary: transactionToDelete ? {
+                ...prev.summary,
+                totalBalance: transactionToDelete.type === 'income'
+                    ? prev.summary.totalBalance - transactionToDelete.amount
+                    : prev.summary.totalBalance + transactionToDelete.amount,
+                monthlyIncome: transactionToDelete.type === 'income'
+                    ? prev.summary.monthlyIncome - transactionToDelete.amount
+                    : prev.summary.monthlyIncome,
+                monthlyExpenses: transactionToDelete.type === 'expense'
+                    ? prev.summary.monthlyExpenses - transactionToDelete.amount
+                    : prev.summary.monthlyExpenses
+            } : prev.summary
+        }));
+
+        try {
+            await expensesAPI.deleteExpense(id);
+            toast.success('Transaction deleted');
+
+            // If modal open, refresh full list (less critical to be instant)
+            if (isTransactionsModalOpen) {
+                fetchAllTransactions();
             }
+
+            // Background sync to ensure stats are perfect
+            fetchData();
+        } catch (error) {
+            // Rollback
+            setData(previousData);
+            toast.error('Failed to delete');
         }
     };
 
-    const handleDeleteLoan = async (id) => {
-        if (window.confirm('Are you sure you want to delete this loan record?')) {
-            try {
-                await loansAPI.deleteLoan(id);
-                toast.success('Loan deleted');
-                fetchLoanData();
-            } catch (error) {
-                toast.error('Failed to delete loan');
-            }
+    const handleDeleteTransaction = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this transaction?')) return;
+
+        try {
+            await deleteExpense(id);
+            toast.success('Transaction deleted');
+        } catch (error) {
+            console.error('Failed to delete transaction', error);
+            toast.error('Failed to delete transaction');
         }
     };
 
-    const handleRepayLoan = async (id, outstandingAmount) => {
-        const repayAmount = prompt(`Enter repayment amount (Max: ₹${outstandingAmount})`);
-        if (repayAmount) {
-            try {
-                await loansAPI.addRepayment(id, {
-                    amount: Number(repayAmount),
-                    note: 'Manual repayment entry'
-                });
-                toast.success('Repayment recorded');
-                fetchLoanData();
-            } catch (error) {
-                toast.error('Failed to record repayment');
+    const handleDeleteLoan = (id) => {
+        toast((t) => (
+            <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-2 font-semibold">
+                    <AlertCircle className="w-5 h-5 text-red-500" />
+                    Delete Loan Record?
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                    Are you sure you want to delete this loan record? This action cannot be undone.
+                </p>
+                <div className="flex gap-2 justify-end mt-2">
+                    <button
+                        onClick={() => toast.dismiss(t.id)}
+                        className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 dark:bg-[#333] hover:bg-gray-200 dark:hover:bg-[#444] transition-colors"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        onClick={async () => {
+                            toast.dismiss(t.id);
+                            try {
+                                await loansAPI.deleteLoan(id);
+                                toast.success('Loan deleted');
+                                fetchLoanData();
+                                fetchData(); // Refresh main balance
+                            } catch (error) {
+                                toast.error('Failed to delete loan');
+                            }
+                        }}
+                        className="px-3 py-1.5 text-sm font-medium rounded-lg bg-red-500 hover:bg-red-600 text-white transition-colors"
+                    >
+                        Delete
+                    </button>
+                </div>
+            </div>
+        ), { duration: Infinity });
+    };
+
+    const handleRepayLoan = (id, outstandingAmount) => {
+        toast((t) => {
+            // Internal state for the toast input
+            let inputValue = outstandingAmount;
+
+            const submitRepayment = async () => {
+                const amount = Number(inputValue);
+                if (!amount || amount <= 0 || amount > outstandingAmount) {
+                    toast.error(`Please enter a valid amount up to ₹${outstandingAmount}`, { id: 'repay-error' });
+                    return;
+                }
+
+                toast.dismiss(t.id);
+                try {
+                    await loansAPI.addRepayment(id, {
+                        amount: amount,
+                        note: 'Manual repayment entry'
+                    });
+                    toast.success('Repayment recorded successfully!');
+                    fetchLoanData();
+                    // Crucial: Refresh general stats because repayment creates an Expense
+                    fetchData();
+                } catch (error) {
+                    toast.error('Failed to record repayment');
+                }
+            };
+
+            return (
+                <div className="flex flex-col gap-4 min-w-[300px] p-2 bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-2xl border border-gray-100 dark:border-[#333]">
+                    <div className="flex items-center gap-3 font-bold text-gray-900 dark:text-gray-100 text-lg">
+                        <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
+                            <CreditCard className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        </div>
+                        Record Repayment
+                    </div>
+
+                    <div className="flex flex-col gap-1.5">
+                        <label className="text-sm font-medium text-gray-600 dark:text-gray-400">
+                            Amount (Max: ₹{outstandingAmount})
+                        </label>
+                        <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium">₹</span>
+                            <input
+                                type="number"
+                                max={outstandingAmount}
+                                min="0"
+                                step="0.01"
+                                defaultValue={outstandingAmount}
+                                onChange={(e) => inputValue = e.target.value}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') submitRepayment();
+                                }}
+                                className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-[#2a2a2a] text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 font-medium transition-shadow"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+
+                    <div className="flex gap-3 justify-end mt-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+                        <button
+                            onClick={() => toast.dismiss(t.id)}
+                            className="px-4 py-2 text-sm font-semibold rounded-xl bg-gray-100 dark:bg-[#333] hover:bg-gray-200 dark:hover:bg-[#444] text-gray-700 dark:text-gray-300 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            onClick={submitRepayment}
+                            className="px-4 py-2 text-sm font-semibold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 transition-all"
+                        >
+                            Confirm Pay
+                        </button>
+                    </div>
+                </div>
+            );
+        }, {
+            duration: Infinity,
+            position: 'top-center',
+            style: {
+                background: 'transparent',
+                boxShadow: 'none',
+                padding: 0,
+                marginTop: '15vh' // Centers it more towards the middle vertically
             }
-        }
+        });
     };
 
     const resetForm = () => {
@@ -250,11 +453,93 @@ const ExpensesView = () => {
         return insights;
     };
 
+    const CustomTooltip = ({ active, payload, label }) => {
+        if (active && payload && payload.length) {
+            return (
+                <div className="bg-white dark:bg-[#1e1e1e] p-4 rounded-xl shadow-xl border border-gray-100 dark:border-[#333]">
+                    <p className="text-sm font-medium mb-2 text-gray-900 dark:text-white">{label}</p>
+                    <div className="space-y-1">
+                        {payload.map((entry, index) => (
+                            <div key={index} className="flex items-center gap-2 text-sm">
+                                <div
+                                    className="w-3 h-3 rounded-full"
+                                    style={{ backgroundColor: entry.color }}
+                                />
+                                <span className="text-gray-500 dark:text-gray-400 capitalize">{entry.name}:</span>
+                                <span className="font-semibold text-gray-900 dark:text-white">
+                                    ₹{entry.value.toFixed(2)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    };
+
+    const getChartData = () => {
+        if (!data.charts.incomeVsExpense || data.charts.incomeVsExpense.length === 0) return [];
+
+        const rawData = data.charts.incomeVsExpense;
+
+        if (activeTab === 'daily') {
+            // Return raw data (daily)
+            // Optionally could slice to last 30 days, but showing full history with scroll/zoom is fine
+            return rawData;
+        }
+
+        if (activeTab === 'weekly') {
+            const weeklyMap = {};
+            rawData.forEach(item => {
+                const date = parseISO(item.date);
+                const weekStart = startOfWeek(date);
+                const weekKey = format(weekStart, 'yyyy-MM-dd');
+
+                if (!weeklyMap[weekKey]) {
+                    weeklyMap[weekKey] = {
+                        date: format(weekStart, 'MMM d'), // Label: "Dec 3"
+                        fullDate: weekKey,
+                        income: 0,
+                        expense: 0
+                    };
+                }
+                weeklyMap[weekKey].income += item.income;
+                weeklyMap[weekKey].expense += item.expense;
+            });
+            return Object.values(weeklyMap).sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate));
+        }
+
+        if (activeTab === 'monthly') {
+            const monthlyMap = {};
+            rawData.forEach(item => {
+                const date = parseISO(item.date);
+                const monthKey = format(startOfMonth(date), 'yyyy-MM-dd');
+
+                if (!monthlyMap[monthKey]) {
+                    monthlyMap[monthKey] = {
+                        date: format(date, 'MMM yyyy'), // Label: "Dec 2025"
+                        fullDate: monthKey,
+                        income: 0,
+                        expense: 0
+                    };
+                }
+                monthlyMap[monthKey].income += item.income;
+                monthlyMap[monthKey].expense += item.expense;
+            });
+            return Object.values(monthlyMap).sort((a, b) => new Date(a.fullDate) - new Date(b.fullDate));
+        }
+
+        return rawData;
+    };
+
+    const chartData = React.useMemo(() => getChartData(), [data.charts.incomeVsExpense, activeTab]);
+
     if (loading) return <div className="flex items-center justify-center h-full">Loading...</div>;
 
     return (
         <div className="flex-1 h-full overflow-y-auto bg-gray-50 dark:bg-[#121212] p-4 sm:p-6 lg:p-8 font-sans text-gray-900 dark:text-gray-100">
-            <div className="max-w-7xl mx-auto space-y-8">
+            <div className="max-w-8xl mx-auto space-y-8">
 
                 {/* Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -479,26 +764,36 @@ const ExpensesView = () => {
                         </div>
                         <div className="h-80">
                             <ResponsiveContainer width="100%" height="100%">
-                                <AreaChart data={data.charts.incomeVsExpense}>
-                                    <defs>
-                                        <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1} />
-                                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.1} />
-                                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#1f2937', border: 'none', borderRadius: '8px', color: '#fff' }}
-                                    />
-                                    <Area type="monotone" dataKey="income" stroke="#10B981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} />
-                                    <Area type="monotone" dataKey="expense" stroke="#EF4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={2} />
-                                </AreaChart>
+                                {activeTab === 'daily' ? (
+                                    <AreaChart data={chartData}>
+                                        <defs>
+                                            <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#10B981" stopOpacity={0.1} />
+                                                <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                                            </linearGradient>
+                                            <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#EF4444" stopOpacity={0.1} />
+                                                <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.1} />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                                        <Tooltip content={<CustomTooltip />} />
+                                        <Area type="monotone" dataKey="income" name="Income" stroke="#10B981" fillOpacity={1} fill="url(#colorIncome)" strokeWidth={2} />
+                                        <Area type="monotone" dataKey="expense" name="Expense" stroke="#EF4444" fillOpacity={1} fill="url(#colorExpense)" strokeWidth={2} />
+                                    </AreaChart>
+                                ) : (
+                                    <BarChart data={chartData} barGap={8}>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" opacity={0.1} />
+                                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6B7280' }} />
+                                        <Tooltip content={<CustomTooltip />} cursor={{ fill: 'transparent' }} />
+                                        <Legend iconType="circle" />
+                                        <Bar dataKey="income" name="Income" fill="#10B981" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                                        <Bar dataKey="expense" name="Expense" fill="#EF4444" radius={[4, 4, 0, 0]} maxBarSize={50} />
+                                    </BarChart>
+                                )}
                             </ResponsiveContainer>
                         </div>
                     </div>
@@ -535,7 +830,7 @@ const ExpensesView = () => {
                     <div className="lg:col-span-2 bg-white dark:bg-[#1e1e1e] rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-[#333]">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-bold">Recent Transactions</h3>
-                            <button className="text-sm text-blue-500 hover:text-blue-600 font-medium">View All</button>
+                            <button onClick={handleViewAll} className="text-sm text-blue-500 hover:text-blue-600 font-medium">View All</button>
                         </div>
                         <div className="space-y-4 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                             {data.recentTransactions.map((t) => (
@@ -806,6 +1101,88 @@ const ExpensesView = () => {
                                 </button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* All Transactions Modal */}
+            {isTransactionsModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white dark:bg-[#1e1e1e] rounded-3xl shadow-2xl w-full max-w-4xl h-[80vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                        <div className="p-6 border-b border-gray-100 dark:border-[#333] flex justify-between items-center">
+                            <h2 className="text-xl font-bold flex items-center gap-2">
+                                <Activity className="w-6 h-6 text-blue-500" />
+                                All Transactions
+                            </h2>
+                            <button onClick={() => setIsTransactionsModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="flex-1 overflow-auto p-6 custom-scrollbar">
+                            {loadingTransactions ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <Clock className="w-6 h-6 animate-spin text-blue-500 mr-2" />
+                                    Loading...
+                                </div>
+                            ) : (
+                                <table className="w-full text-left border-collapse">
+                                    <thead className="sticky top-0 bg-white dark:bg-[#1e1e1e] z-10">
+                                        <tr className="text-sm text-gray-500 border-b border-gray-100 dark:border-[#333]">
+                                            <th className="py-3 font-medium">Date</th>
+                                            <th className="py-3 font-medium">Description</th>
+                                            <th className="py-3 font-medium">Category</th>
+                                            <th className="py-3 font-medium">Type</th>
+                                            <th className="py-3 font-medium text-right">Amount</th>
+                                            <th className="py-3 font-medium text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-[#333]">
+                                        {allTransactions.map((t) => (
+                                            <tr key={t._id} className="group hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors">
+                                                <td className="py-4 text-sm text-gray-500 dark:text-gray-400">
+                                                    {format(new Date(t.date), 'MMM d, yyyy')}
+                                                </td>
+                                                <td className="py-4 font-medium text-gray-900 dark:text-white">
+                                                    {t.description || '-'}
+                                                </td>
+                                                <td className="py-4">
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                                                        {t.category}
+                                                    </span>
+                                                </td>
+                                                <td className="py-4">
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${t.type === 'income'
+                                                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                        }`}>
+                                                        {t.type === 'income' ? 'Income' : 'Expense'}
+                                                    </span>
+                                                </td>
+                                                <td className={`py-4 text-right font-bold ${t.type === 'income' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-900 dark:text-white'
+                                                    }`}>
+                                                    {t.type === 'income' ? '+' : '-'}₹{t.amount.toFixed(2)}
+                                                </td>
+                                                <td className="py-4 text-right">
+                                                    <button
+                                                        onClick={() => handleDelete(t._id)} // Note: handleDelete will refresh stats, but not this list unless updated
+                                                        className="p-2 text-gray-400 hover:text-red-500 transition-colors"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {allTransactions.length === 0 && (
+                                            <tr>
+                                                <td colSpan="6" className="py-8 text-center text-gray-500">No transactions found.</td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

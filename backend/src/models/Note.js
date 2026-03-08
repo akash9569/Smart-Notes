@@ -75,6 +75,23 @@ const noteSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
         },
+        // Journal specific fields
+        mood: {
+            value: String, // emoji or identifier
+            label: String, // e.g., 'Happy', 'Sad'
+            score: Number, // 1-10 or 1-5 for analytics
+        },
+        gratitude: [{
+            text: String,
+            id: String
+        }],
+        dailyHighlight: String,
+        intention: String,
+        journalDate: {
+            type: Date,
+            default: Date.now,
+            index: true
+        },
         template: {
             type: String,
             default: 'blank',

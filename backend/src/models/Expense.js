@@ -39,8 +39,8 @@ const expenseSchema = new mongoose.Schema({
     },
     recurrenceInterval: {
         type: String,
-        enum: ['daily', 'weekly', 'monthly', 'yearly', null],
-        default: null
+        enum: ['daily', 'weekly', 'monthly', 'yearly'],
+        required: false
     }
 }, {
     timestamps: true

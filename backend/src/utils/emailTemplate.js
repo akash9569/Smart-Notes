@@ -1,3 +1,5 @@
+import { logoCid } from './logoBase64.js';
+
 const getEmailTemplate = (userName, taskTitle, dueDate, description) => {
     return `
 <!DOCTYPE html>
@@ -96,6 +98,7 @@ const getEmailTemplate = (userName, taskTitle, dueDate, description) => {
 <body>
     <div class="container">
         <div class="header">
+            <img src="cid:${logoCid}" alt="Smart Notes Logo" style="width: 56px; height: 56px; border-radius: 14px; display: block; margin: 0 auto 12px;" />
             <h1>Smart Notes Reminder</h1>
         </div>
         <div class="content">

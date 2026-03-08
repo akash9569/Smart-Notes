@@ -6,6 +6,9 @@ export const authAPI = {
     logout: () => api.post('/auth/logout'),
     getMe: () => api.get('/auth/me'),
     updateDetails: (data) => api.put('/auth/updatedetails', data),
+    forgotPassword: (data) => api.post('/auth/forgot-password', data),
+    verifyOtp: (data) => api.post('/auth/verify-otp', data),
+    resetPassword: (data) => api.post('/auth/reset-password', data),
 };
 
 export const notesAPI = {

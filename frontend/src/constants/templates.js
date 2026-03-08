@@ -5,7 +5,10 @@ import {
     Columns,
     Calendar,
     CalendarDays,
-    ListChecks
+    ListChecks,
+    Sun,
+    Moon,
+    Book
 } from 'lucide-react';
 
 export const TEMPLATES = [
@@ -101,6 +104,33 @@ export const TEMPLATES = [
         category: 'default',
         icon: Calendar,
         preview: 'calendar',
+        variants: []
+    },
+    {
+        id: 'morning-journal',
+        name: 'Morning Journal',
+        description: 'Set intentions and gratitude',
+        category: 'journal',
+        icon: Sun,
+        preview: 'lined',
+        variants: []
+    },
+    {
+        id: 'night-reflection',
+        name: 'Night Reflection',
+        description: 'Review your day and mood',
+        category: 'journal',
+        icon: Moon,
+        preview: 'lined',
+        variants: []
+    },
+    {
+        id: 'gratitude-journal',
+        name: 'Gratitude Journal',
+        description: 'Focus on the positive',
+        category: 'journal',
+        icon: Book,
+        preview: 'lined',
         variants: []
     }
 ];

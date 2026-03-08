@@ -22,7 +22,7 @@ import { tasksAPI, habitsAPI, expensesAPI, stickyNotesAPI } from '../api';
 import { format, isToday } from 'date-fns';
 
 const HomeView = ({ setActiveView, onCreateNote }) => {
-    const { notes } = useNotes();
+    const { notes, setCurrentNote } = useNotes();
     const { user } = useAuth();
     const [greeting, setGreeting] = useState('');
 
@@ -83,7 +83,7 @@ const HomeView = ({ setActiveView, onCreateNote }) => {
 
     return (
         <div className="flex-1 overflow-y-auto bg-[#F9FAFB] dark:bg-[#111827] p-8">
-            <div className="max-w-7xl mx-auto space-y-10">
+            <div className="max-w-8xl mx-auto space-y-10">
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-2 border-b border-gray-100 dark:border-gray-800">
                     <div>
@@ -222,6 +222,7 @@ const HomeView = ({ setActiveView, onCreateNote }) => {
                                     <div
                                         key={note._id}
                                         onClick={() => {
+                                            setCurrentNote(note);
                                             setActiveView('notes');
                                         }}
                                         className="bg-white dark:bg-[#1F2937] p-5 rounded-2xl border border-gray-100 dark:border-gray-700/50 hover:border-blue-500/20 dark:hover:border-blue-500/30 hover:shadow-lg transition-all duration-300 cursor-pointer group flex flex-col h-40 relative"
@@ -237,9 +238,7 @@ const HomeView = ({ setActiveView, onCreateNote }) => {
                                         <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-2 truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                                             {note.title || 'Untitled Note'}
                                         </h3>
-                                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate leading-relaxed opacity-90">
-                                            {note.content?.replace(/<[^>]*>/g, '') || 'No additional text'}
-                                        </p>
+
                                     </div>
                                 )) : (
                                     <div className="col-span-2 py-12 text-center bg-white dark:bg-[#1F2937] rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">

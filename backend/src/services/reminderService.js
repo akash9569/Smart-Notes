@@ -3,6 +3,7 @@ import Task from '../models/Task.js';
 import User from '../models/User.js';
 import sendEmail from '../utils/email.js';
 import getEmailTemplate from '../utils/emailTemplate.js';
+import { logoPath, logoCid } from '../utils/logoBase64.js';
 
 const scheduleReminders = () => {
     // Run every minute
@@ -34,6 +35,11 @@ const scheduleReminders = () => {
                         email: user.email,
                         subject: `Reminder: ${task.title}`,
                         html: htmlContent,
+                        attachments: [{
+                            filename: 'logo.png',
+                            path: logoPath,
+                            cid: logoCid
+                        }]
                     });
 
                     // Mark as sent

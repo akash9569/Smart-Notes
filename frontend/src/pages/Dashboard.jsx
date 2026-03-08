@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotes } from '../context/NotesContext';
 import Sidebar from '../components/Sidebar';
+
 import NotesList from '../components/NotesList';
 import RichTextEditor from '../components/RichTextEditor';
 import HomeView from '../components/HomeView';
@@ -15,8 +17,10 @@ import Chatbot from '../components/Chatbot';
 import NotePropertiesPanel from '../components/NotePropertiesPanel';
 import ExpensesView from '../components/ExpensesView';
 import HabitTracker from '../components/HabitTracker';
+import TimelineView from '../components/TimelineView';
 import StickyNotesView from '../components/StickyNotes/StickyNotesView';
 import JournalsView from '../components/JournalsView';
+import JournalEntry from '../components/JournalEntry';
 import {
     Maximize2,
     MoreHorizontal,
@@ -61,6 +65,10 @@ const stripHtml = (html) => {
 
 const Dashboard = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
+
+    // ... existing hooks
     const {
         notes,
         createNote,
@@ -76,7 +84,30 @@ const Dashboard = () => {
         journals
     } = useNotes();
 
-    const [activeView, setActiveView] = useState('home'); // Default to home
+    const [activeView, setActiveView] = useState('home');
+
+    // Sync View with URL
+    useEffect(() => {
+        const path = location.pathname.substring(1); // /tasks -> tasks
+        if (path && path !== '') {
+            // Mapping special cases if needed, else exact match
+            // /notes/:id is handled by note selection logic ideally, 
+            // but for now let's just switch view.
+
+            // If path contains slash, take first part? e.g. notes/123 -> notes
+            const view = path.split('/')[0];
+            setActiveView(view);
+        } else {
+            setActiveView('home');
+        }
+
+        // Handle Command Palette Actions
+        if (location.state?.action === 'create' && path.startsWith('notes')) {
+            handleCreateNote();
+            // Clear state?
+            window.history.replaceState({}, document.title);
+        }
+    }, [location]);
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -348,6 +379,8 @@ const Dashboard = () => {
         switch (activeView) {
             case 'home':
                 return <HomeView setActiveView={setActiveView} onCreateNote={handleCreateNote} />;
+            case 'timeline':
+                return <TimelineView />;
             case 'calendar':
                 return <CalendarView
                     onSelectNote={(note) => {
@@ -482,13 +515,12 @@ const Dashboard = () => {
                                                 />
                                             </div>
                                         )}
-                                        <div className="flex-1 overflow-hidden">
-                                            <RichTextEditor
-                                                key={currentNote._id}
-                                                content={currentNote.content}
-                                                onChange={setContent}
-                                                isZenMode={isZenMode}
-                                                onToggleZenMode={() => setIsZenMode(!isZenMode)}
+                                        <div className="flex-1 overflow-hidden flex flex-col">
+                                            <JournalEntry
+                                                note={currentNote}
+                                                onUpdate={async (updates) => {
+                                                    await updateNote(currentNote._id, updates);
+                                                }}
                                                 isSaving={isSaving}
                                             />
                                         </div>
@@ -976,6 +1008,8 @@ const Dashboard = () => {
 
             {/* Friendly AI Chatbot */}
             <Chatbot />
+
+
         </div>
     );
 };

@@ -12,17 +12,32 @@ import {
     LogOut,
     Sun,
     Moon,
-    Laptop
+    Laptop,
+    PlusCircle,
+    CheckCircle,
+    TrendingUp,
+    TrendingDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTasks } from '../context/TasksContext';
+import { useHabits } from '../context/HabitsContext';
+import { useExpenses } from '../context/ExpensesContext';
 import { useNotes } from '../context/NotesContext';
-import clsx from 'clsx';
 import { useTheme } from '../context/ThemeContext';
 
 export const CommandPalette = () => {
     const [open, setOpen] = useState(false);
     const navigate = useNavigate();
-    const { notes } = useNotes();
+    const notesContext = useNotes();
+    const tasksContext = useTasks();
+    const habitsContext = useHabits();
+    const expensesContext = useExpenses();
+
+    const notes = notesContext?.notes || [];
+    const tasks = tasksContext?.tasks || [];
+    const habits = habitsContext?.habits || [];
+    const expensesData = expensesContext?.data;
+
     const { logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
 
@@ -58,7 +73,7 @@ export const CommandPalette = () => {
                     <Search className="w-5 h-5 text-gray-400 mr-2" />
                     <Command.Input
                         autoFocus
-                        placeholder="Search notes, tasks, or type a command..."
+                        placeholder="Search notes, tasks, habits, transactions..."
                         className="w-full h-14 bg-transparent outline-none text-base text-gray-900 dark:text-gray-100 placeholder:text-gray-400 font-medium"
                     />
                     <div className="flex items-center gap-1">
@@ -70,6 +85,37 @@ export const CommandPalette = () => {
                     <Command.Empty className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
                         No results found.
                     </Command.Empty>
+
+                    <Command.Group heading="Actions" className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 px-2">
+                        <Command.Item
+                            onSelect={() => runCommand(() => navigate('/notes', { state: { action: 'create' } }))}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-100 dark:aria-selected:bg-gray-800 transition-colors"
+                        >
+                            <PlusCircle className="w-4 h-4 text-indigo-500" />
+                            <span>Create New Note</span>
+                        </Command.Item>
+                        <Command.Item
+                            onSelect={() => runCommand(() => navigate('/tasks', { state: { action: 'create' } }))}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-100 dark:aria-selected:bg-gray-800 transition-colors"
+                        >
+                            <CheckCircle className="w-4 h-4 text-green-500" />
+                            <span>Create New Task</span>
+                        </Command.Item>
+                        <Command.Item
+                            onSelect={() => runCommand(() => navigate('/expenses', { state: { action: 'add-expense' } }))}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-100 dark:aria-selected:bg-gray-800 transition-colors"
+                        >
+                            <TrendingDown className="w-4 h-4 text-red-500" />
+                            <span>Add Expense</span>
+                        </Command.Item>
+                        <Command.Item
+                            onSelect={() => runCommand(() => navigate('/expenses', { state: { action: 'add-income' } }))}
+                            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-100 dark:aria-selected:bg-gray-800 transition-colors"
+                        >
+                            <TrendingUp className="w-4 h-4 text-emerald-500" />
+                            <span>Add Income</span>
+                        </Command.Item>
+                    </Command.Group>
 
                     <Command.Group heading="Navigation" className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 px-2">
                         <Command.Item
@@ -125,6 +171,47 @@ export const CommandPalette = () => {
                             >
                                 <FileText className="w-4 h-4 text-gray-400" />
                                 <span>{note.title || 'Untitled'}</span>
+                            </Command.Item>
+                        ))}
+                    </Command.Group>
+
+                    <Command.Group heading="Tasks" className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 px-2 mt-4">
+                        {tasks?.map((task) => (
+                            <Command.Item
+                                key={task._id}
+                                onSelect={() => runCommand(() => navigate('/tasks'))} // ideally focus on the task
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-100 dark:aria-selected:bg-gray-800 transition-colors"
+                            >
+                                <CheckSquare className={`w-4 h-4 ${task.completed ? 'text-green-500' : 'text-gray-400'}`} />
+                                <div className="flex flex-col">
+                                    <span className={task.completed ? 'line-through opacity-70' : ''}>{task.title}</span>
+                                </div>
+                            </Command.Item>
+                        ))}
+                    </Command.Group>
+
+                    <Command.Group heading="Habits" className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 px-2 mt-4">
+                        {habits?.map((habit) => (
+                            <Command.Item
+                                key={habit._id}
+                                onSelect={() => runCommand(() => navigate('/habits'))}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-100 dark:aria-selected:bg-gray-800 transition-colors"
+                            >
+                                <Activity className="w-4 h-4 text-purple-400" />
+                                <span>{habit.name}</span>
+                            </Command.Item>
+                        ))}
+                    </Command.Group>
+
+                    <Command.Group heading="Recent Transactions" className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-2 px-2 mt-4">
+                        {expensesData?.recentTransactions?.map((txn) => (
+                            <Command.Item
+                                key={txn._id}
+                                onSelect={() => runCommand(() => navigate('/expenses'))}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer aria-selected:bg-gray-100 dark:aria-selected:bg-gray-800 transition-colors"
+                            >
+                                <Wallet className={`w-4 h-4 ${txn.type === 'income' ? 'text-emerald-500' : 'text-red-500'}`} />
+                                <span>{txn.description} - ₹{txn.amount}</span>
                             </Command.Item>
                         ))}
                     </Command.Group>

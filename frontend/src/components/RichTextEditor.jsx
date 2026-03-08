@@ -1140,9 +1140,16 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
     }, [currentTemplate, isZenMode]);
 
     useEffect(() => {
-        if (editor && content !== editor.getHTML()) {
-            if (editor.getText() === '' && content === '') return;
-            // editor.commands.setContent(content);
+        if (editor && content !== undefined) {
+            // Only update if content has actually changed to avoid cursor jumping
+            if (editor.getHTML() !== content) {
+                // If content is empty string and editor is empty (just <p></p>), don't update
+                if (content === '' && editor.getText() === '') return;
+
+                // Preserve selection if possible, though specific to use case
+                // For now, straightforward update
+                editor.commands.setContent(content);
+            }
         }
     }, [content, editor]);
 

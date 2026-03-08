@@ -153,14 +153,30 @@ const CalendarView = ({ onSelectNote }) => {
             onSelectNote(existingJournal);
         } else {
             const content = `
-                <div style="font-family: sans-serif; max-width: 800px; margin: 0 auto;">
-                    <h1 style="color: #ec4899; border-bottom: 2px solid #ec4899; padding-bottom: 10px;">🌸 Daily Journal</h1>
-                    <p style="color: #666; font-style: italic;"><strong>Date:</strong> ${format(date, 'EEEE, MMMM d, yyyy')}</p>
-                    <div style="background-color: #fdf2f8; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
-                        <h3 style="color: #be185d; margin-top: 0;">🌤️ Mood Check-in</h3>
-                        <p>How are you feeling?</p>
-                    </div>
-                </div>`;
+                <h1 style="color: #6366f1;">📔 Daily Journal - ${format(date, 'MMM d, yyyy')}</h1>
+                <p><span style="color: #94a3b8;"><em>${format(date, 'EEEE')}</em></span></p>
+                <hr>
+                <p></p>
+                <h2 style="color: #4f46e5;">🎯 Focus & Intentions</h2>
+                <p><span style="color: #94a3b8;"><em>What are your absolute top priorities for today?</em></span></p>
+                <ul data-type="taskList">
+                    <li data-type="taskItem" data-checked="false"><p></p></li>
+                    <li data-type="taskItem" data-checked="false"><p></p></li>
+                    <li data-type="taskItem" data-checked="false"><p></p></li>
+                </ul>
+                <p></p>
+                <h2 style="color: #4f46e5;">📝 Notes & Thoughts</h2>
+                <p><span style="color: #94a3b8;"><em>Jot down your ideas, meeting notes, or random thoughts...</em></span></p>
+                <p></p>
+                <p></p>
+                <p></p>
+                <h2 style="color: #4f46e5;">🌙 Evening Review</h2>
+                <p><span style="color: #94a3b8;"><em>What did you learn? What could have gone better?</em></span></p>
+                <ul>
+                    <li><p></p></li>
+                </ul>
+                <p></p>
+            `;
 
             try {
                 const newNote = await createNote({
@@ -297,7 +313,7 @@ const CalendarView = ({ onSelectNote }) => {
 
     return (
         <div className="flex-1 h-full flex flex-col bg-gray-50 dark:bg-[#121212] overflow-hidden relative">
-            <div className="w-full h-full max-w-7xl mx-auto flex flex-col p-4 sm:p-6 gap-6">
+            <div className="w-full h-full max-w-8xl mx-auto flex flex-col p-4 sm:p-6 gap-6">
 
                 {/* --- Header Section --- */}
                 <header className="flex flex-col gap-4 shrink-0">

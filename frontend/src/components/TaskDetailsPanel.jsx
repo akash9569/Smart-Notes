@@ -151,14 +151,14 @@ const TaskDetailsPanel = ({ task, onClose, onUpdate, onDelete, onEdit }) => {
                         type="text"
                         value={localTask.title}
                         onChange={(e) => setLocalTask({ ...localTask, title: e.target.value })}
-                        onBlur={() => onUpdate({ title: localTask.title })}
+                        onBlur={() => onUpdate(localTask)}
                         className="w-full text-xl font-bold text-gray-900 dark:text-white bg-transparent border-none focus:outline-none focus:ring-0 p-0 placeholder-gray-400 mb-2"
                         placeholder="Task title"
                     />
                     <textarea
                         value={localTask.description || ''}
                         onChange={(e) => setLocalTask({ ...localTask, description: e.target.value })}
-                        onBlur={() => onUpdate({ description: localTask.description })}
+                        onBlur={() => onUpdate(localTask)}
                         className="w-full text-sm text-gray-600 dark:text-gray-400 bg-transparent border-none focus:outline-none focus:ring-0 p-0 placeholder-gray-400 resize-none min-h-[60px]"
                         placeholder="Add description..."
                     />
@@ -210,92 +210,103 @@ const TaskDetailsPanel = ({ task, onClose, onUpdate, onDelete, onEdit }) => {
                         </span>
                     </div>
 
+                    {localTask.subtasks?.map((subtask, index) => (
+                        <div
+                            key={index}
+                            className={`group flex items-center gap-3 p-3 rounded-r-xl transition-all border-l-4 ${subtask.completed
+                                ? 'bg-gray-50 dark:bg-[#1a1a1a] border-gray-200 dark:border-gray-800 opacity-60'
+                                : 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                                }`}
+                        >
+                            <button
+                                onClick={() => toggleSubtask(index)}
+                                className={`w-5 h-5 rounded-md border-2 flex items-center justify-center transition-colors shrink-0 ${subtask.completed
+                                    ? 'bg-gray-400 border-gray-400 text-white'
+                                    : 'border-blue-400 dark:border-blue-500 text-transparent hover:border-blue-600'
+                                    }`}
+                            >
+                                {subtask.completed && <CheckSquare className="w-3.5 h-3.5" />}
+                            </button>
+                            <input
+                                type="text"
+                                value={subtask.title}
+                                readOnly
+                                className={`flex-1 bg-transparent border-none focus:outline-none text-sm ${subtask.completed
+                                    ? 'text-gray-500 line-through'
+                                    : 'text-gray-700 dark:text-gray-200 font-medium'
+                                    }`}
+                            />
+                            <button
+                                onClick={() => deleteSubtask(index)}
+                                className="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                            >
+                                <Trash2 className="w-4 h-4" />
+                            </button>
+                        </div>
+                    ))}
+                </div>
+
+                <div className="flex items-center gap-2 px-2">
+                    <Plus className="w-4 h-4 text-gray-400" />
+                    <input
+                        type="text"
+                        value={subtaskInput}
+                        onChange={(e) => setSubtaskInput(e.target.value)}
+                        onKeyDown={handleAddSubtask}
+                        placeholder="Add a subtask..."
+                        className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400"
+                    />
+                </div>
+            </div>
+
+            {/* Attachments Section */}
+            <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+                    <Paperclip className="w-4 h-4 text-gray-500" />
+                    Attachments
+                </h3>
+
+                {/* File List */}
+                {attachments.length > 0 && (
                     <div className="space-y-2 mb-3">
-                        {localTask.subtasks?.map((subtask, index) => (
-                            <div key={index} className="group flex items-center gap-3 p-2 hover:bg-gray-50 dark:hover:bg-[#2d2d2d] rounded-lg transition-colors">
+                        {attachments.map((file, index) => (
+                            <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-[#252525] border border-gray-100 dark:border-gray-800">
+                                <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs uppercase">
+                                    {file.name.split('.').pop()}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
+                                    <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                                </div>
                                 <button
-                                    onClick={() => toggleSubtask(index)}
-                                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${subtask.completed
-                                        ? 'bg-blue-500 border-blue-500 text-white'
-                                        : 'border-gray-300 dark:border-gray-600 hover:border-blue-500'
-                                        }`}
+                                    onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
+                                    className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
                                 >
-                                    {subtask.completed && <CheckSquare className="w-3 h-3" />}
-                                </button>
-                                <span className={`flex-1 text-sm ${subtask.completed ? 'text-gray-400 line-through' : 'text-gray-700 dark:text-gray-200'}`}>
-                                    {subtask.title}
-                                </span>
-                                <button
-                                    onClick={() => deleteSubtask(index)}
-                                    className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <X className="w-4 h-4" />
                                 </button>
                             </div>
                         ))}
                     </div>
+                )}
 
-                    <div className="flex items-center gap-2 px-2">
-                        <Plus className="w-4 h-4 text-gray-400" />
-                        <input
-                            type="text"
-                            value={subtaskInput}
-                            onChange={(e) => setSubtaskInput(e.target.value)}
-                            onKeyDown={handleAddSubtask}
-                            placeholder="Add a subtask..."
-                            className="flex-1 bg-transparent border-none focus:outline-none text-sm text-gray-900 dark:text-white placeholder-gray-400"
-                        />
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    multiple
+                    onChange={handleFileUpload}
+                />
+                <div
+                    onClick={() => fileInputRef.current?.click()}
+                    className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 dark:hover:bg-[#2d2d2d] transition-colors cursor-pointer group"
+                >
+                    <div className="w-10 h-10 bg-gray-100 dark:bg-[#333] rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                        <Plus className="w-5 h-5 text-gray-400" />
                     </div>
-                </div>
-
-                {/* Attachments Section */}
-                <div>
-                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-                        <Paperclip className="w-4 h-4 text-gray-500" />
-                        Attachments
-                    </h3>
-
-                    {/* File List */}
-                    {attachments.length > 0 && (
-                        <div className="space-y-2 mb-3">
-                            {attachments.map((file, index) => (
-                                <div key={index} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-[#252525] border border-gray-100 dark:border-gray-800">
-                                    <div className="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold text-xs uppercase">
-                                        {file.name.split('.').pop()}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{file.name}</p>
-                                        <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setAttachments(attachments.filter((_, i) => i !== index))}
-                                        className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg transition-colors"
-                                    >
-                                        <X className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        multiple
-                        onChange={handleFileUpload}
-                    />
-                    <div
-                        onClick={() => fileInputRef.current?.click()}
-                        className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 dark:hover:bg-[#2d2d2d] transition-colors cursor-pointer group"
-                    >
-                        <div className="w-10 h-10 bg-gray-100 dark:bg-[#333] rounded-full flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                            <Plus className="w-5 h-5 text-gray-400" />
-                        </div>
-                        <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
-                    </div>
+                    <p className="text-sm text-gray-500">Click to upload or drag and drop</p>
                 </div>
             </div>
+
 
             {/* Footer */}
             <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#252525] flex justify-between items-center text-xs text-gray-500">
@@ -308,7 +319,7 @@ const TaskDetailsPanel = ({ task, onClose, onUpdate, onDelete, onEdit }) => {
                     Delete Task
                 </button>
             </div>
-        </div>
+        </div >
     );
 };
 

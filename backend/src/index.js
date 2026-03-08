@@ -20,6 +20,7 @@ import loanRoutes from './routes/loanRoutes.js';
 import habitRoutes from './routes/habitRoutes.js';
 import stickyNoteRoutes from './routes/stickyNotes.js';
 import galleryRoutes from './routes/gallery.js';
+import contactRoutes from './routes/contact.js';
 import scheduleReminders from './services/reminderService.js';
 import connectCloudinary from './config/cloudinary.js';
 
@@ -64,6 +65,7 @@ app.use('/api/loans', loanRoutes);
 app.use('/api/habits', habitRoutes);
 app.use('/api/sticky-notes', stickyNoteRoutes);
 app.use('/api/gallery', galleryRoutes);
+app.use('/api/contact', contactRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
