@@ -43,16 +43,16 @@ const Footer = ({ onGetStarted }) => {
                         </p>
                         {/* Social Icons */}
                         <div className="flex items-center space-x-3 pt-1">
-                            <a href="https://x.com/AkashSingh57860" aria-label="Twitter" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-indigo-500/20 hover:border-indigo-500/50 border border-transparent transition-all">
+                            <a href="https://x.com/AkashSingh57860" aria-label="Twitter" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-indigo-500/20 hover:border-indigo-500/50 border border-transparent transition-all" target='_blank'>
                                 <Twitter className="w-4 h-4" />
                             </a>
-                            <a href="https://github.com/akash9569" aria-label="GitHub" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-purple-500/20 hover:border-purple-500/50 border border-transparent transition-all">
+                            <a href="https://github.com/akash9569" aria-label="GitHub" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-purple-500/20 hover:border-purple-500/50 border border-transparent transition-all" target='_blank'>
                                 <Github className="w-4 h-4" />
                             </a>
-                            <a href="https://www.linkedin.com/in/iamakashsingh9/" aria-label="LinkedIn" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-blue-500/20 hover:border-blue-500/50 border border-transparent transition-all">
+                            <a href="https://www.linkedin.com/in/iamakashsingh9/" aria-label="LinkedIn" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-blue-500/20 hover:border-blue-500/50 border border-transparent transition-all" target='_blank'>
                                 <Linkedin className="w-4 h-4" />
                             </a>
-                            <a href="https://www.instagram.com/iamakashsingh9/" aria-label="Instagram" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-pink-500/20 hover:border-pink-500/50 border border-transparent transition-all">
+                            <a href="https://www.instagram.com/iamakashsingh9/" aria-label="Instagram" className="p-2 bg-gray-800/50 rounded-full text-gray-400 hover:text-white hover:bg-pink-500/20 hover:border-pink-500/50 border border-transparent transition-all" target='_blank'>
                                 <Instagram className="w-4 h-4" />
                             </a>
                         </div>
@@ -95,9 +95,9 @@ const Footer = ({ onGetStarted }) => {
                     <div className="space-y-5">
                         <h3 className="text-white font-semibold uppercase tracking-wider text-xs">Legal</h3>
                         <ul className="space-y-3">
-                            <li><span className="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm">Privacy Policy</span></li>
-                            <li><span className="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm">Terms of Service</span></li>
-                            <li><span className="text-gray-400 hover:text-white transition-colors cursor-pointer text-sm">Cookie Policy</span></li>
+                            <li><Link to="/privacy" className="text-gray-400 hover:text-white transition-colors text-sm">Privacy Policy</Link></li>
+                            <li><Link to="/terms" className="text-gray-400 hover:text-white transition-colors text-sm">Terms of Service</Link></li>
+                            <li><Link to="/cookies" className="text-gray-400 hover:text-white transition-colors text-sm">Cookie Policy</Link></li>
                         </ul>
                     </div>
                 </div>

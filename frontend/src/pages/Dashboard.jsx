@@ -6,11 +6,14 @@ import Sidebar from '../components/Sidebar';
 
 import NotesList from '../components/NotesList';
 import RichTextEditor from '../components/RichTextEditor';
+import PrintPreviewModal from '../components/PrintPreviewModal';
+import { printNote } from '../utils/printNote';
 import HomeView from '../components/HomeView';
 import CalendarView from '../components/CalendarView';
 import TasksView from '../components/TasksView';
 import NotebooksView from '../components/NotebooksView';
 import SettingsView from '../components/SettingsView';
+import AccountInfoView from '../components/AccountInfoView';
 import TemplatesView from '../components/TemplatesView';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 import Chatbot from '../components/Chatbot';
@@ -116,10 +119,13 @@ const Dashboard = () => {
     const [isShareOpen, setIsShareOpen] = useState(false);
     const [inviteEmail, setInviteEmail] = useState('');
     const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+    const [isDashboardPrintOpen, setIsDashboardPrintOpen] = useState(false);
     const [isAccessMenuOpen, setIsAccessMenuOpen] = useState(false);
+    const [editingAccessForIndex, setEditingAccessForIndex] = useState(null);
     const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
     const shareRef = React.useRef(null);
     const accessMenuRef = React.useRef(null);
+    const guestAccessMenuRef = React.useRef(null);
     const moreMenuRef = React.useRef(null);
     const colorPickerRef = React.useRef(null);
 
@@ -135,6 +141,8 @@ const Dashboard = () => {
         const handleClickOutside = (event) => {
             if (shareRef.current && !shareRef.current.contains(event.target)) {
                 setIsShareOpen(false);
+                setEditingAccessForIndex(null);
+                setIsAccessMenuOpen(false);
             }
             if (moreMenuRef.current && !moreMenuRef.current.contains(event.target)) {
                 setIsMoreMenuOpen(false);
@@ -144,6 +152,9 @@ const Dashboard = () => {
             }
             if (accessMenuRef.current && !accessMenuRef.current.contains(event.target)) {
                 setIsAccessMenuOpen(false);
+            }
+            if (guestAccessMenuRef.current && !guestAccessMenuRef.current.contains(event.target)) {
+                setEditingAccessForIndex(null);
             }
         };
 
@@ -403,6 +414,8 @@ const Dashboard = () => {
                 return <TemplatesView onCreateNote={handleCreateNote} />;
             case 'settings':
                 return <SettingsView />;
+            case 'account-info':
+                return <AccountInfoView />;
             case 'expenses':
                 return <ExpensesView />;
             case 'habits':
@@ -669,105 +682,169 @@ const Dashboard = () => {
                                                     </button>
 
                                                     {isShareOpen && (
-                                                        <div className="absolute top-full right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-[#1e1e1e] text-gray-900 dark:text-white rounded-xl shadow-2xl border border-gray-200 dark:border-[#333] p-5 z-50 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                                                            <div className="flex items-center justify-between mb-5">
-                                                                <h3 className="font-semibold text-lg">Share Note</h3>
-                                                                <button onClick={() => setIsShareOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                                        <div className="absolute top-full right-0 mt-2 w-80 sm:w-[440px] bg-white dark:bg-[#242424] text-gray-900 dark:text-gray-100 rounded-2xl shadow-2xl border border-gray-200 dark:border-[#333] p-0 z-50 animate-in fade-in zoom-in-95 duration-150 origin-top-right flex flex-col font-sans">
+
+                                                            {/* Header */}
+                                                            <div className="flex items-center justify-between px-6 pt-6 pb-4">
+                                                                <h3 className="font-normal text-[22px] tracking-tight">Share</h3>
+                                                                <button onClick={() => setIsShareOpen(false)} className="text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#333] p-2 rounded-full transition-colors flex items-center justify-center">
                                                                     <X className="w-5 h-5" />
                                                                 </button>
                                                             </div>
 
-                                                            <div className="flex space-x-2 mb-6">
-                                                                <div className="flex-1 relative">
+                                                            {/* Input Section */}
+                                                            <div className="px-6 pb-5">
+                                                                <div className="flex items-center bg-white dark:bg-[#1e1e1e] border border-gray-400 dark:border-[#555] focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500 rounded-lg overflow-hidden transition-all duration-200">
                                                                     <input
                                                                         type="email"
                                                                         value={inviteEmail}
                                                                         onChange={(e) => setInviteEmail(e.target.value)}
                                                                         placeholder="Add people, groups, or emails"
-                                                                        className="w-full bg-gray-50 dark:bg-[#2d2d2d] border border-gray-200 dark:border-[#444] rounded-lg pl-3 pr-3 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all"
+                                                                        className="flex-1 bg-transparent pl-3 pr-3 py-3 text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none"
                                                                         onKeyDown={(e) => e.key === 'Enter' && handleInvite()}
                                                                     />
+                                                                    <div className="pr-2 flex items-center">
+                                                                        <button
+                                                                            onClick={handleInvite}
+                                                                            disabled={!inviteEmail}
+                                                                            className="h-[36px] bg-blue-600 hover:bg-blue-700 disabled:bg-transparent disabled:text-gray-400 text-white px-4 rounded-full text-[14px] font-medium transition-colors"
+                                                                        >
+                                                                            Invite
+                                                                        </button>
+                                                                    </div>
                                                                 </div>
-                                                                <button
-                                                                    onClick={handleInvite}
-                                                                    disabled={!inviteEmail}
-                                                                    className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
-                                                                >
-                                                                    Invite
-                                                                </button>
                                                             </div>
 
-                                                            <div className="mb-6">
-                                                                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">People with access</div>
-                                                                <div className="flex items-center justify-between group p-2 -mx-2 hover:bg-gray-50 dark:hover:bg-[#2d2d2d] rounded-lg transition-colors cursor-default">
+                                                            {/* People with access */}
+                                                            <div className="px-6 pb-4 flex-1 overflow-y-visible max-h-[220px] custom-scrollbar">
+                                                                <div className="text-[14px] font-medium text-gray-900 dark:text-gray-200 mb-3">People with access</div>
+
+                                                                <div className="flex items-center justify-between group py-2">
                                                                     <div className="flex items-center space-x-3">
-                                                                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white dark:ring-[#1e1e1e]">
+                                                                        <div className="w-10 h-10 shrink-0 rounded-full bg-blue-600 flex items-center justify-center text-white font-medium text-[16px]">
                                                                             {user?.name ? user.name.charAt(0).toUpperCase() : 'A'}
                                                                         </div>
-                                                                        <div>
-                                                                            <div className="text-sm font-medium text-gray-900 dark:text-gray-200">{user?.name || 'User'} <span className="text-gray-500 font-normal">(you)</span></div>
-                                                                            <div className="text-xs text-gray-500">{user?.email || 'user@example.com'}</div>
+                                                                        <div className="min-w-0">
+                                                                            <div className="text-[14px] font-medium text-gray-900 dark:text-gray-100 truncate">{user?.name || 'User'} <span className="text-gray-500 font-normal ml-1">(you)</span></div>
+                                                                            <div className="text-[13px] text-gray-500 truncate">{user?.email || 'user@example.com'}</div>
                                                                         </div>
                                                                     </div>
-                                                                    <span className="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-[#333] px-2 py-1 rounded-full">Owner</span>
+                                                                    <span className="text-[13px] text-gray-500 pr-2 shrink-0">Owner</span>
                                                                 </div>
+
                                                                 {currentNote.sharedWith && currentNote.sharedWith.map((share, index) => (
-                                                                    <div key={index} className="flex items-center justify-between group p-2 -mx-2 hover:bg-gray-50 dark:hover:bg-[#2d2d2d] rounded-lg transition-colors cursor-default mt-1">
+                                                                    <div key={index} className="flex items-center justify-between group py-2">
                                                                         <div className="flex items-center space-x-3">
-                                                                            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm shadow-md ring-2 ring-white dark:ring-[#1e1e1e]">
+                                                                            <div className="w-10 h-10 shrink-0 rounded-full bg-purple-600 flex items-center justify-center text-white font-medium text-[16px]">
                                                                                 {share.email.charAt(0).toUpperCase()}
                                                                             </div>
-                                                                            <div>
-                                                                                <div className="text-sm font-medium text-gray-900 dark:text-gray-200">{share.email}</div>
-                                                                                <div className="text-xs text-gray-500 capitalize">{share.permission}</div>
+                                                                            <div className="min-w-0">
+                                                                                <div className="text-[14px] font-medium text-gray-900 dark:text-gray-100 truncate">{share.email}</div>
+                                                                                <div className="text-[13px] text-gray-500 capitalize truncate">{share.permission === 'view' ? 'Viewer' : 'Editor'}</div>
                                                                             </div>
                                                                         </div>
-                                                                        <span className="text-xs font-medium text-gray-500 bg-gray-100 dark:bg-[#333] px-2 py-1 rounded-full">Guest</span>
+                                                                        <div className="shrink-0 flex items-center space-x-2 pr-2">
+                                                                            <div className="flex bg-gray-100 dark:bg-[#333] p-1 rounded-lg">
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (share.permission !== 'view') {
+                                                                                            const newSharedWith = [...currentNote.sharedWith];
+                                                                                            newSharedWith[index].permission = 'view';
+                                                                                            updateNote(currentNote._id, { sharedWith: newSharedWith });
+                                                                                            toast.success('Permission updated to Viewer');
+                                                                                        }
+                                                                                    }}
+                                                                                    className={`text-[12px] font-medium px-2.5 py-1 rounded-md transition-all ${share.permission === 'view' ? 'bg-white dark:bg-[#444] text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-[#444]/50'}`}
+                                                                                >
+                                                                                    Viewer
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        if (share.permission !== 'edit') {
+                                                                                            const newSharedWith = [...currentNote.sharedWith];
+                                                                                            newSharedWith[index].permission = 'edit';
+                                                                                            updateNote(currentNote._id, { sharedWith: newSharedWith });
+                                                                                            toast.success('Permission updated to Editor');
+                                                                                        }
+                                                                                    }}
+                                                                                    className={`text-[12px] font-medium px-2.5 py-1 rounded-md transition-all ${share.permission === 'edit' ? 'bg-white dark:bg-[#444] text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 hover:bg-white/50 dark:hover:bg-[#444]/50'}`}
+                                                                                >
+                                                                                    Editor
+                                                                                </button>
+                                                                            </div>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    const newSharedWith = currentNote.sharedWith.filter((_, i) => i !== index);
+                                                                                    updateNote(currentNote._id, { sharedWith: newSharedWith });
+                                                                                    toast.success('Access removed');
+                                                                                }}
+                                                                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                                                                                title="Remove access"
+                                                                            >
+                                                                                <X className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                 ))}
                                                             </div>
 
-                                                            <div className="border-t border-gray-200 dark:border-[#333] pt-4 flex items-center justify-between">
-                                                                <div className="relative" ref={accessMenuRef}>
-                                                                    <button
-                                                                        onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
-                                                                        className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200 transition-colors p-1.5 rounded hover:bg-gray-100 dark:hover:bg-[#2d2d2d]"
-                                                                    >
-                                                                        {currentNote.isPublic ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                                                                        <span>{currentNote.isPublic ? 'Anyone with the link' : 'Restricted access'}</span>
-                                                                        <ChevronDown className="w-3 h-3" />
-                                                                    </button>
-
-                                                                    {isAccessMenuOpen && (
-                                                                        <div className="absolute bottom-full left-0 mb-2 w-48 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-50">
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    updateNote(currentNote._id, { isPublic: false });
-                                                                                    setIsAccessMenuOpen(false);
-                                                                                    toast.success('Access restricted');
-                                                                                }}
-                                                                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] flex items-center space-x-2 text-gray-700 dark:text-gray-200"
-                                                                            >
-                                                                                <Lock className="w-4 h-4" />
-                                                                                <span>Restricted</span>
-                                                                            </button>
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    updateNote(currentNote._id, { isPublic: true });
-                                                                                    setIsAccessMenuOpen(false);
-                                                                                    toast.success('Link is now public');
-                                                                                }}
-                                                                                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] flex items-center space-x-2 text-gray-700 dark:text-gray-200"
-                                                                            >
-                                                                                <Globe className="w-4 h-4" />
-                                                                                <span>Anyone with link</span>
-                                                                            </button>
+                                                            {/* General Access & Copy Link Footer */}
+                                                            <div className="bg-[#f8f9fa] dark:bg-[#1f1f1f] p-4 px-6 flex items-center justify-between border-t border-gray-200 dark:border-[#333] rounded-b-2xl">
+                                                                <div className="flex items-center space-x-3 overflow-hidden">
+                                                                    <div className="w-10 h-10 shrink-0 rounded-full bg-[#e8eaed] dark:bg-[#333] flex items-center justify-center text-gray-700 dark:text-gray-300">
+                                                                        {currentNote.isPublic ? <Globe className="w-[18px] h-[18px]" /> : <Lock className="w-[18px] h-[18px]" />}
+                                                                    </div>
+                                                                    <div className="relative overflow-hidden" ref={accessMenuRef}>
+                                                                        <button
+                                                                            onClick={() => setIsAccessMenuOpen(!isAccessMenuOpen)}
+                                                                            className="flex items-center space-x-1 text-[14px] font-medium text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-[#333] py-0.5 px-1.5 -ml-1.5 rounded transition-colors"
+                                                                        >
+                                                                            <span className="truncate">{currentNote.isPublic ? 'Anyone with the link' : 'Restricted'}</span>
+                                                                            <ChevronDown className="w-3 h-3 text-gray-500 shrink-0" />
+                                                                        </button>
+                                                                        <div className="text-[12px] text-gray-500 mt-0.5 truncate pr-2">
+                                                                            {currentNote.isPublic ? 'Anyone on the internet with the link can view' : 'Only people with access can open with the link'}
                                                                         </div>
-                                                                    )}
+                                                                        {isAccessMenuOpen && (
+                                                                            <div className="absolute bottom-full left-0 mb-2 w-64 bg-white dark:bg-[#2a2a2a] rounded-xl shadow-lg border border-gray-100 dark:border-[#444] py-1.5 z-50">
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        updateNote(currentNote._id, { isPublic: false });
+                                                                                        setIsAccessMenuOpen(false);
+                                                                                        toast.success('Access restricted');
+                                                                                    }}
+                                                                                    className="w-full text-left px-4 py-2 text-[14px] hover:bg-gray-50 dark:hover:bg-[#3a3a3a] flex items-center justify-between group"
+                                                                                >
+                                                                                    <div>
+                                                                                        <div className="font-medium text-gray-900 dark:text-gray-100">Restricted</div>
+                                                                                        <div className="text-gray-500 dark:text-gray-400 text-[12px] group-hover:text-gray-600 dark:group-hover:text-gray-300">Only people with access can open</div>
+                                                                                    </div>
+                                                                                    {!currentNote.isPublic && <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>}
+                                                                                </button>
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        updateNote(currentNote._id, { isPublic: true });
+                                                                                        setIsAccessMenuOpen(false);
+                                                                                        toast.success('Link is now public');
+                                                                                    }}
+                                                                                    className="w-full text-left px-4 py-2 text-[14px] hover:bg-gray-50 dark:hover:bg-[#3a3a3a] flex items-center justify-between group"
+                                                                                >
+                                                                                    <div>
+                                                                                        <div className="font-medium text-gray-900 dark:text-gray-100">Anyone with the link</div>
+                                                                                        <div className="text-gray-500 dark:text-gray-400 text-[12px] group-hover:text-gray-600 dark:group-hover:text-gray-300">Anyone on the internet can view</div>
+                                                                                    </div>
+                                                                                    {currentNote.isPublic && <div className="w-2 h-2 rounded-full bg-blue-500 shrink-0"></div>}
+                                                                                </button>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
                                                                 </div>
                                                                 <button
-                                                                    onClick={handleShare}
-                                                                    className="flex items-center space-x-2 px-4 py-2 rounded-lg border border-gray-200 dark:border-[#444] hover:bg-gray-50 dark:hover:bg-[#2d2d2d] hover:border-gray-300 dark:hover:border-[#555] transition-all text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                                                                    onClick={() => {
+                                                                        navigator.clipboard.writeText(`${window.location.origin}/notes/${currentNote._id}`);
+                                                                        toast.success('Link copied to clipboard');
+                                                                    }}
+                                                                    className="shrink-0 ml-3 py-2 px-4 rounded-full border border-gray-300 dark:border-[#4b4b4b] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] hover:border-gray-400 dark:hover:border-[#666] transition-colors text-[14px] font-medium text-blue-600 dark:text-blue-400 flex items-center space-x-2"
                                                                 >
                                                                     <Link className="w-4 h-4" />
                                                                     <span>Copy link</span>
@@ -787,82 +864,97 @@ const Dashboard = () => {
                                                     </button>
 
                                                     {isMoreMenuOpen && (
-                                                        <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-200 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 py-1 z-50 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { setIsPropertiesPanelOpen(true); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Settings className="w-4 h-4 text-gray-400" /> <span>Properties</span>
+                                                        <div className="absolute top-full right-0 mt-2 w-64 bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-200 rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.1)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] border border-gray-100 dark:border-[#333] py-2 z-50 max-h-[85vh] overflow-y-auto custom-scrollbar font-sans">
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { setIsPropertiesPanelOpen(true); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Settings className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Properties</span>
                                                                 </button>
-                                                                <button onClick={() => { toast('Opened in Lite editor', { icon: '📝' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <ExternalLink className="w-4 h-4 text-gray-400" /> <span>Open in Lite editor</span>
-                                                                </button>
-                                                            </div>
-                                                            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { handleShare(); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Share className="w-4 h-4 text-gray-400" /> <span>Share</span>
-                                                                </button>
-                                                                <button onClick={() => { handleShare(); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Link className="w-4 h-4 text-gray-400" /> <span>Copy link</span>
+                                                                <button onClick={() => { toast('Opened in Lite editor', { icon: '📝' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <ExternalLink className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Open in Lite editor</span>
                                                                 </button>
                                                             </div>
-                                                            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { toast('Move feature coming soon!', { icon: '🚚' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <FileInput className="w-4 h-4 text-gray-400" /> <span>Move</span>
+
+                                                            <div className="h-px bg-gray-100 dark:bg-[#333] my-1.5 mx-2" />
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { setIsShareOpen(true); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Share className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Share</span>
                                                                 </button>
-                                                                <button onClick={() => { toast('Copy to feature coming soon!', { icon: '📋' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Copy className="w-4 h-4 text-gray-400" /> <span>Copy to</span>
-                                                                </button>
-                                                                <button onClick={() => { toast('Note duplicated!', { icon: '✨' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Files className="w-4 h-4 text-gray-400" /> <span>Duplicate</span>
-                                                                </button>
-                                                            </div>
-                                                            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { toast('Edit tags feature coming soon!', { icon: '🏷️' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Tag className="w-4 h-4 text-gray-400" /> <span>Edit tags</span>
-                                                                </button>
-                                                                <button onClick={() => { toast('Saved as template!', { icon: '💾' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <FileText className="w-4 h-4 text-gray-400" /> <span>Save as Template</span>
+                                                                <button onClick={() => { handleShare(); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Link className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Copy link</span>
                                                                 </button>
                                                             </div>
-                                                            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { toast('Added to shortcuts!', { icon: '⭐' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Star className="w-4 h-4 text-gray-400" /> <span>Add to Shortcuts</span>
+
+                                                            <div className="h-px bg-gray-100 dark:bg-[#333] my-1.5 mx-2" />
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { toast('Move feature coming soon!', { icon: '🚚' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <FileInput className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Move</span>
                                                                 </button>
-                                                                <button onClick={() => { handlePinNote(); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Pin className="w-4 h-4 text-gray-400" /> <span>{currentNote.isPinned ? 'Unpin from Notebook' : 'Pin to Notebook'}</span>
+                                                                <button onClick={() => { toast('Copy to feature coming soon!', { icon: '📋' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Copy className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Copy to</span>
                                                                 </button>
-                                                                <button onClick={() => { toast('Pinned to home!', { icon: '🏠' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Pin className="w-4 h-4 text-gray-400" /> <span>Pin to Home</span>
-                                                                </button>
-                                                            </div>
-                                                            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <ChevronsUpDown className="w-4 h-4 text-gray-400" /> <span>Collapsible sections</span>
+                                                                <button onClick={() => { handleDuplicateNote(currentNote._id); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Files className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Duplicate</span>
                                                                 </button>
                                                             </div>
-                                                            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { toast('Find feature coming soon!', { icon: '🔍' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Search className="w-4 h-4 text-gray-400" /> <span>Find in note</span>
+
+                                                            <div className="h-px bg-gray-100 dark:bg-[#333] my-1.5 mx-2" />
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { toast('Edit tags feature coming soon!', { icon: '🏷️' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Tag className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Edit tags</span>
                                                                 </button>
-                                                                <button onClick={() => { toast('Note info: Created just now', { icon: 'ℹ️' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Info className="w-4 h-4 text-gray-400" /> <span>Note info</span>
-                                                                </button>
-                                                                <button onClick={() => { toast('History feature coming soon!', { icon: 'clock' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <History className="w-4 h-4 text-gray-400" /> <span>Note history</span>
+                                                                <button onClick={() => { toast('Saved as template!', { icon: '💾' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <FileText className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Save as Template</span>
                                                                 </button>
                                                             </div>
-                                                            <div className="h-px bg-gray-200 dark:bg-gray-700 my-1" />
-                                                            <div className="px-2 py-1">
-                                                                <button onClick={() => { window.print(); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3">
-                                                                    <Printer className="w-4 h-4 text-gray-400" /> <span>Print</span>
+
+                                                            <div className="h-px bg-gray-100 dark:bg-[#333] my-1.5 mx-2" />
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { toast('Added to shortcuts!', { icon: '⭐' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Star className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Add to Shortcuts</span>
                                                                 </button>
-                                                                <button onClick={() => { handleDeleteNote(currentNote._id); setIsMoreMenuOpen(false); }} className="w-full text-left px-2 py-1.5 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300">
-                                                                    <Trash className="w-4 h-4" /> <span>Move to Trash</span>
+                                                                <button onClick={() => { handlePinNote(); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Pin className={`w-4 h-4 ${currentNote.isPinned ? 'fill-current text-blue-500' : 'text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200'} transition-colors`} /> <span className="text-gray-700 dark:text-gray-200">{currentNote.isPinned ? 'Unpin from Notebook' : 'Pin to Notebook'}</span>
+                                                                </button>
+                                                                <button onClick={() => { toast('Pinned to home!', { icon: '🏠' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Pin className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Pin to Home</span>
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="h-px bg-gray-100 dark:bg-[#333] my-1.5 mx-2" />
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <ChevronsUpDown className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Collapsible sections</span>
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="h-px bg-gray-100 dark:bg-[#333] my-1.5 mx-2" />
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { toast('Find feature coming soon!', { icon: '🔍' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Search className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Find in note</span>
+                                                                </button>
+                                                                <button onClick={() => { setIsPropertiesPanelOpen(true); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Info className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Note info</span>
+                                                                </button>
+                                                                <button onClick={() => { toast('History feature coming soon!', { icon: 'clock' }); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <History className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Note history</span>
+                                                                </button>
+                                                            </div>
+
+                                                            <div className="h-px bg-gray-100 dark:bg-[#333] my-1.5 mx-2" />
+
+                                                            <div className="px-2">
+                                                                <button onClick={() => { setIsDashboardPrintOpen(true); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
+                                                                    <Printer className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Print</span>
+                                                                </button>
+                                                                <button onClick={() => { handleDeleteNote(currentNote._id); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg flex items-center space-x-3 text-red-600 dark:text-red-400 transition-colors group mt-1">
+                                                                    <Trash className="w-4 h-4 text-red-500 dark:text-red-400" /> <span>Move to Trash</span>
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -908,6 +1000,7 @@ const Dashboard = () => {
                                                 isZenMode={isZenMode}
                                                 onToggleZenMode={() => setIsZenMode(!isZenMode)}
                                                 isSaving={isSaving}
+                                                noteTitle={title}
                                             />
                                         </div>
                                     </div>
@@ -958,60 +1051,68 @@ const Dashboard = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
     return (
-        <div className="flex h-screen bg-white dark:bg-[#1a1a1a] overflow-hidden font-sans">
-            {/* Mobile Sidebar Overlay */}
-            {isSidebarOpen && (
-                <div
-                    className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
-                    onClick={() => setIsSidebarOpen(false)}
-                />
-            )}
-
-            {!isZenMode && (
-                <Sidebar
-                    activeView={activeView}
-                    setActiveView={(view) => {
-                        setActiveView(view);
-                        setIsSidebarOpen(false); // Close sidebar on mobile when view changes
-                    }}
-                    onCreateNote={handleCreateNote}
-                    isOpen={isSidebarOpen}
-                    onClose={() => setIsSidebarOpen(false)}
-                />
-            )}
-
-            <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-                {/* Mobile Header */}
-                {!isZenMode && (
-                    <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1a1a] z-30">
-                        <button
-                            onClick={() => setIsSidebarOpen(true)}
-                            className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg"
-                        >
-                            <Menu className="w-6 h-6" />
-                        </button>
-                        <span className="font-semibold text-gray-900 dark:text-white capitalize">{activeView}</span>
-                        <div className="w-8"></div> {/* Spacer for centering */}
-                    </div>
+        <>
+            <PrintPreviewModal
+                isOpen={isDashboardPrintOpen}
+                onClose={() => setIsDashboardPrintOpen(false)}
+                html={content || currentNote?.content || ''}
+                title={title || currentNote?.title || 'Untitled Note'}
+            />
+            <div className="flex h-screen bg-white dark:bg-[#1a1a1a] overflow-hidden font-sans print-root">
+                {/* Mobile Sidebar Overlay */}
+                {isSidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/50 z-40 lg:hidden backdrop-blur-sm transition-opacity"
+                        onClick={() => setIsSidebarOpen(false)}
+                    />
                 )}
 
-                {renderMainContent()}
+                {!isZenMode && (
+                    <Sidebar
+                        activeView={activeView}
+                        setActiveView={(view) => {
+                            setActiveView(view);
+                            setIsSidebarOpen(false); // Close sidebar on mobile when view changes
+                        }}
+                        onCreateNote={handleCreateNote}
+                        isOpen={isSidebarOpen}
+                        onClose={() => setIsSidebarOpen(false)}
+                    />
+                )}
+
+                <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+                    {/* Mobile Header */}
+                    {!isZenMode && (
+                        <div className="lg:hidden flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#1a1a1a] z-30">
+                            <button
+                                onClick={() => setIsSidebarOpen(true)}
+                                className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg"
+                            >
+                                <Menu className="w-6 h-6" />
+                            </button>
+                            <span className="font-semibold text-gray-900 dark:text-white capitalize">{activeView}</span>
+                            <div className="w-8"></div> {/* Spacer for centering */}
+                        </div>
+                    )}
+
+                    {renderMainContent()}
+                </div>
+
+                {/* Delete Confirmation Modal */}
+                <DeleteConfirmationModal
+                    isOpen={isDeleteModalOpen}
+                    onClose={() => setIsDeleteModalOpen(false)}
+                    onConfirm={confirmDeleteNote}
+                    noteTitle={noteToDelete?.title}
+                />
+
+                {/* Friendly AI Chatbot */}
+                <Chatbot />
+
+
             </div>
-
-            {/* Delete Confirmation Modal */}
-            <DeleteConfirmationModal
-                isOpen={isDeleteModalOpen}
-                onClose={() => setIsDeleteModalOpen(false)}
-                onConfirm={confirmDeleteNote}
-                noteTitle={noteToDelete?.title}
-            />
-
-            {/* Friendly AI Chatbot */}
-            <Chatbot />
-
-
-        </div>
+        </>
     );
 };
 
-export default Dashboard;
+            export default Dashboard;

@@ -209,3 +209,79 @@ exports.extractTasks = async (req, res) => {
         });
     }
 };
+
+// @desc    Process general chat from the AI assistant
+// @route   POST /api/ai/process
+// @access  Private
+exports.processChat = async (req, res) => {
+    try {
+        const { content, context } = req.body;
+
+        if (!content || content.trim().length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'Content is required'
+            });
+        }
+
+        if (!isAIEnabled()) {
+            return res.status(503).json({
+                success: false,
+                message: 'AI is not enabled. Please check API keys.'
+            });
+        }
+
+        // Build messages array
+        const messages = [
+            {
+                role: 'system',
+                content: `You are a friendly, highly capable, and empathetic AI assistant for an application called "Smart Notes". 
+Your goal is to help the user organize their thoughts, brainstorm, draft content, fix spelling/grammar, extract action items, and be generally helpful.
+Important behavioral rules:
+1. Always be polite, warm, and conversational. Use emojis naturally but not excessively.
+2. Directly answer the user's question or fulfill their request.
+3. If they ask who you are, say you are the Smart Notes AI Assistant.
+4. Keep your responses clear, well-formatted (use markdown if needed), and reasonably concise.
+5. If you do not know the answer to something, gently say so.
+6. Focus your help on productivity, note-taking, and writing.`
+            }
+        ];
+
+        // Append historical context if provided
+        if (context && Array.isArray(context)) {
+            // Take the last 10 messages for context so we don't blow up the context window
+            const recentContext = context.slice(-10);
+            recentContext.forEach(msg => {
+                if (msg.role && msg.content && !msg.isError) {
+                    messages.push({ role: msg.role === 'assistant' ? 'assistant' : 'user', content: msg.content });
+                }
+            });
+        } else {
+            messages.push({ role: 'user', content });
+        }
+
+        // Call OpenAI API
+        const completion = await openai.chat.completions.create({
+            model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+            messages: messages,
+            max_tokens: 800,
+            temperature: 0.7,
+        });
+
+        const result = completion.choices[0].message.content.trim();
+
+        res.json({
+            success: true,
+            result,
+            source: 'openai'
+        });
+
+    } catch (error) {
+        console.error('AI Chat Error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to process chat with AI',
+            error: error.message
+        });
+    }
+};

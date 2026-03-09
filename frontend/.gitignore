@@ -1,0 +1,6 @@
+.env
+node_modules
+dist
+build
+backend/node_modules
+backend/.env

@@ -206,8 +206,8 @@ const Landing = () => {
                                 {/* Feature 4 - Tasks & Calendar (Large) */}
                                 <div className="md:col-span-2 bg-gradient-to-br from-[#161b22] to-[#0d1117] p-5 lg:p-6 rounded-2xl border border-gray-800 hover:border-blue-500/30 transition-all group overflow-hidden relative">
                                     <div className="absolute top-0 left-0 w-48 h-48 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all"></div>
-                                    <div className="relative z-10 flex items-start space-x-4">
-                                        <div className="bg-blue-500/20 w-10 h-10 rounded-xl flex items-center justify-center border border-blue-500/30 flex-shrink-0">
+                                    <div className="relative z-10">
+                                        <div className="bg-blue-500/20 w-10 h-10 rounded-xl flex items-center justify-center mb-3 border border-blue-500/30">
                                             <CheckCircle2 className="w-5 h-5 text-blue-400" />
                                         </div>
                                         <div>
@@ -224,7 +224,26 @@ const Landing = () => {
                                     </div>
                                 </div>
 
-                                {/* Feature 5 - Habit Tracker */}
+                                {/* Feature 5 - Journals */}
+                                <div className="md:col-span-1 bg-gradient-to-br from-[#161b22] to-[#0d1117] p-5 lg:p-6 rounded-2xl border border-gray-800 hover:border-amber-500/30 transition-all group overflow-hidden relative">
+                                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all"></div>
+                                    <div className="relative z-10">
+                                        <div className="bg-amber-500/20 w-10 h-10 rounded-xl flex items-center justify-center mb-3 border border-amber-500/30">
+                                            <Zap className="w-5 h-5 text-amber-400" />
+                                        </div>
+                                        <h4 className="text-xl font-bold text-slate-200 mb-2">Daily Journal & Reflection</h4>
+                                        <p className="text-gray-400 text-sm leading-relaxed max-w-md">
+                                            Write daily journal entries in a clean, distraction-free interface. <br /> Reflect on your day, set intentions, and build a personal archive of your growth.
+                                        </p>
+                                        <div className="flex flex-wrap gap-1.5 mt-3">
+                                            {['Daily Entries', 'Mood Tracking', 'Reflections', 'Private Archive'].map(t => (
+                                                <span key={t} className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">{t}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Feature 6 - Habit Tracker */}
                                 <div className="bg-gradient-to-br from-[#161b22] to-[#0d1117] p-5 lg:p-6 rounded-2xl border border-gray-800 hover:border-pink-500/30 transition-all group overflow-hidden relative">
                                     <div className="absolute top-0 right-0 w-48 h-48 bg-pink-500/10 rounded-full blur-3xl group-hover:bg-pink-500/20 transition-all"></div>
                                     <div className="relative z-10">
@@ -238,25 +257,6 @@ const Landing = () => {
                                         <div className="flex flex-wrap gap-1.5 mt-3">
                                             {['Streaks', 'Heatmap', 'Daily Check-ins'].map(t => (
                                                 <span key={t} className="text-xs bg-pink-500/10 text-pink-400 border border-pink-500/20 px-2 py-0.5 rounded-full">{t}</span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Feature 6 - Journals */}
-                                <div className="md:col-span-2 bg-gradient-to-br from-[#161b22] to-[#0d1117] p-5 lg:p-6 rounded-2xl border border-gray-800 hover:border-amber-500/30 transition-all group overflow-hidden relative">
-                                    <div className="absolute bottom-0 right-0 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl group-hover:bg-amber-500/10 transition-all"></div>
-                                    <div className="relative z-10">
-                                        <div className="bg-amber-500/20 w-10 h-10 rounded-xl flex items-center justify-center mb-3 border border-amber-500/30">
-                                            <Zap className="w-5 h-5 text-amber-400" />
-                                        </div>
-                                        <h4 className="text-xl font-bold text-slate-200 mb-2">Daily Journal & Reflection</h4>
-                                        <p className="text-gray-400 text-sm leading-relaxed max-w-md">
-                                            Write daily journal entries in a clean, distraction-free interface. Reflect on your day, set intentions, and build a personal archive of your growth.
-                                        </p>
-                                        <div className="flex flex-wrap gap-1.5 mt-3">
-                                            {['Daily Entries', 'Mood Tracking', 'Reflections', 'Private Archive'].map(t => (
-                                                <span key={t} className="text-xs bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded-full">{t}</span>
                                             ))}
                                         </div>
                                     </div>
@@ -403,11 +403,13 @@ const LoginModal = ({ onClose, onSwitchToSignup, onSwitchToForgotPassword }) => 
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(!!localStorage.getItem('rememberedEmail'));
+    const [localError, setLocalError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setLocalError('');
         try {
             if (rememberMe) {
                 localStorage.setItem('rememberedEmail', email);
@@ -418,7 +420,9 @@ const LoginModal = ({ onClose, onSwitchToSignup, onSwitchToForgotPassword }) => 
             navigate('/');
             toast.success('Welcome back!');
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Login failed');
+            const errorMsg = error.response?.data?.message || 'Login failed';
+            setLocalError(errorMsg);
+            toast.error(errorMsg);
         }
     };
 
@@ -445,6 +449,15 @@ const LoginModal = ({ onClose, onSwitchToSignup, onSwitchToForgotPassword }) => 
                     <h2 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400 mb-2 tracking-tight">Welcome Back</h2>
                     <p className="text-sm text-slate-400 font-medium">Sign in to continue to your dashboard</p>
                 </div>
+
+                {localError && (
+                    <div className="mb-6 p-3 bg-red-500/10 border border-red-500/30 rounded-lg relative z-10 flex flex-col justify-center items-center sm:items-start">
+                        <p className="text-red-400 text-sm flex items-center gap-1.5 font-medium">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                            {localError}
+                        </p>
+                    </div>
+                )}
 
                 <form className="space-y-5 relative z-10" onSubmit={handleSubmit}>
                     <div>

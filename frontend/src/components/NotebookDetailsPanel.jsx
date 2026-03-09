@@ -18,6 +18,7 @@ import {
 import { format } from 'date-fns';
 import { notebooksAPI } from '../api';
 import toast from 'react-hot-toast';
+import { printNote } from '../utils/printNote';
 
 const NotebookDetailsPanel = ({ notebook, onClose, onUpdate, onDelete, onCreateNote, notes, onSelectNote, onDuplicate }) => {
     const [localNotebook, setLocalNotebook] = useState(notebook);
@@ -61,7 +62,11 @@ const NotebookDetailsPanel = ({ notebook, onClose, onUpdate, onDelete, onCreateN
     };
 
     const handleExport = () => {
-        window.print();
+        const notesList = notebookNotes.map(n =>
+            `<h2>${n.title || 'Untitled'}</h2>${n.content || '<p>No content</p>'}<hr/>`
+        ).join('');
+        const html = notesList || '<p>No notes in this notebook.</p>';
+        printNote(html, localNotebook.name || 'Notebook');
     };
 
     return (

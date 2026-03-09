@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useEditor, EditorContent, BubbleMenu, ReactNodeViewRenderer } from '@tiptap/react';
 import TaskItemNode from './TaskItemNode';
 import StarterKit from '@tiptap/starter-kit';
@@ -118,8 +119,9 @@ import Youtube from '@tiptap/extension-youtube';
 import VideoExtension from './VideoExtension';
 import { aiAPI } from '../api';
 
-// Custom Font Size Extension
+// Custom Font Size Extension - extends TextStyle and keeps marks on node splits/enters
 const FontSize = TextStyle.extend({
+    keepOnSplit: true,
     addAttributes() {
         return {
             ...this.parent?.(),
@@ -159,10 +161,13 @@ import YoutubeModal from './YoutubeModal';
 import AIMenu from './AIMenu';
 import PageTemplatePicker from './PageTemplatePicker';
 import '../styles/templates.css';
+import PrintPreviewModal from './PrintPreviewModal';
 
-const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggleZenMode }) => {
+const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggleZenMode, noteTitle }) => {
     const [isInsertOpen, setIsInsertOpen] = useState(false);
     const [isMoreOpen, setIsMoreOpen] = useState(false);
+    const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+    const [moreMenuPos, setMoreMenuPos] = useState({ top: 0, right: 0 });
     const [isAIOpen, setIsAIOpen] = useState(false);
     const [isAILoading, setIsAILoading] = useState(false);
     const [aiError, setAiError] = useState(null);
@@ -173,6 +178,17 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
     const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
     const [isYoutubeModalOpen, setIsYoutubeModalOpen] = useState(false);
     const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
+    // Track active text color for persistent coloring across typing
+    const [activeColor, setActiveColor] = useState(null);
+
+    // Link modal state
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [linkUrl, setLinkUrl] = useState('');
+    const [linkText, setLinkText] = useState('');
+
+    // Image URL modal state
+    const [isImageUrlModalOpen, setIsImageUrlModalOpen] = useState(false);
+    const [imageUrl, setImageUrl] = useState('');
 
     const insertRef = useRef(null);
     const moreRef = useRef(null);
@@ -186,7 +202,6 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
         const handleClickOutside = (event) => {
             if (insertRef.current && !insertRef.current.contains(event.target)) setIsInsertOpen(false);
             if (moreRef.current && !moreRef.current.contains(event.target)) setIsMoreOpen(false);
-            if (moreRef.current && !moreRef.current.contains(event.target)) setIsMoreOpen(false);
             if (aiRef.current && !aiRef.current.contains(event.target)) setIsAIOpen(false);
             if (statusRef.current && !statusRef.current.contains(event.target)) setIsStatusOpen(false);
             if (fontFamilyRef.current && !fontFamilyRef.current.contains(event.target)) setIsFontFamilyOpen(false);
@@ -199,27 +214,89 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
         };
     }, []);
 
+    // Persist active color: whenever cursor moves into text without a color mark, re-apply stored color
+    const activeColorRef = useRef(null);
+    useEffect(() => {
+        activeColorRef.current = activeColor;
+    }, [activeColor]);
+
+    useEffect(() => {
+        if (!editor) return;
+
+        // Re-apply stored color on focus (when user clicks back into editor after picking a color)
+        let isApplying = false;
+        const handleFocus = () => {
+            if (activeColorRef.current && !isApplying) {
+                isApplying = true;
+                setTimeout(() => {
+                    if (activeColorRef.current && editor && !editor.isDestroyed) {
+                        editor.chain().setColor(activeColorRef.current).run();
+                    }
+                    isApplying = false;
+                }, 0);
+            }
+        };
+
+        // Also re-apply on keydown so every new character gets the color
+        const handleKeyDown = (e) => {
+            if (!activeColorRef.current) return;
+            // Only for printable characters (not arrows, backspace, etc.)
+            const isPrintable = e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey;
+            if (!isPrintable) return;
+            // Check if current position already has the color
+            const currentColor = editor.getAttributes('textStyle').color;
+            if (currentColor !== activeColorRef.current) {
+                editor.chain().setColor(activeColorRef.current).run();
+            }
+        };
+
+        editor.on('focus', handleFocus);
+        editor.view.dom.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            editor.off('focus', handleFocus);
+            editor.view.dom.removeEventListener('keydown', handleKeyDown);
+        };
+    }, [editor]);
+
     if (!editor) {
         return null;
     }
 
     const addImage = () => {
-        const url = window.prompt('URL');
-        if (url) {
-            editor.chain().focus().setImage({ src: url }).run();
+        setImageUrl('');
+        setIsImageUrlModalOpen(true);
+    };
+
+    const handleImageUrlInsert = () => {
+        if (imageUrl) {
+            editor.chain().focus().setImage({ src: imageUrl }).run();
         }
+        setIsImageUrlModalOpen(false);
+        setImageUrl('');
     };
 
     const setLink = () => {
-        const previousUrl = editor.getAttributes('link').href;
-        const url = window.prompt('URL', previousUrl);
+        const previousUrl = editor.getAttributes('link').href || '';
+        setLinkUrl(previousUrl);
+        setLinkText('');
+        setIsLinkModalOpen(true);
+    };
 
-        if (url === null) return;
-        if (url === '') {
+    const handleLinkInsert = () => {
+        if (!linkUrl) {
             editor.chain().focus().extendMarkRange('link').unsetLink().run();
-            return;
+        } else {
+            const url = linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`;
+            if (linkText) {
+                editor.chain().focus().insertContent(`<a href="${url}">${linkText}</a>`).run();
+            } else {
+                editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+            }
         }
-        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+        setIsLinkModalOpen(false);
+        setLinkUrl('');
+        setLinkText('');
     };
 
     const fileInputRef = useRef(null);
@@ -227,9 +304,17 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
 
     const handleFileUpload = (type) => {
         setUploadType(type);
-        if (fileInputRef.current) {
-            fileInputRef.current.click();
-        }
+        // Wait a tick so the accept attribute updates before opening dialog
+        setTimeout(() => {
+            if (fileInputRef.current) {
+                // Dynamically set accept based on type
+                if (type === 'image') fileInputRef.current.accept = 'image/*';
+                else if (type === 'video') fileInputRef.current.accept = 'video/*';
+                else if (type === 'audio') fileInputRef.current.accept = 'audio/*';
+                else fileInputRef.current.accept = '*/*';
+                fileInputRef.current.click();
+            }
+        }, 0);
     };
 
     const onFileSelected = (event) => {
@@ -402,6 +487,10 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
         }
     };
 
+    const printNote = () => {
+        setIsPrintPreviewOpen(true);
+    };
+
     const insertTable = () => {
         editor.chain().focus().insertTable({ rows: 5, cols: 5, withHeaderRow: true }).run();
         // Insert a paragraph after the table to ensure we can type below it
@@ -419,387 +508,764 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
     };
 
     return (
-        <div className="no-print flex items-center justify-between px-5 py-2.5 border-b border-gray-200/60 dark:border-white/10 bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-[#1a1a1a] dark:via-[#1e1e1e] dark:to-[#1a1a1a] backdrop-blur-xl sticky top-0 z-20 text-gray-700 dark:text-gray-300 font-sans transition-all duration-200 shadow-sm dark:shadow-none">
+        <>
+            <div className="no-print flex items-center justify-between px-5 py-2.5 border-b border-gray-200/60 dark:border-white/10 bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-[#1a1a1a] dark:via-[#1e1e1e] dark:to-[#1a1a1a] backdrop-blur-xl sticky top-0 z-20 text-gray-700 dark:text-gray-300 font-sans transition-all duration-200 shadow-sm dark:shadow-none">
 
-            {/* YouTube Modal */}
-            <YoutubeModal
-                isOpen={isYoutubeModalOpen}
-                onClose={() => setIsYoutubeModalOpen(false)}
-                onInsert={(url) => {
-                    if (editor) {
-                        editor.commands.setYoutubeVideo({ src: url });
-                    }
-                }}
-            />
-            <div className="flex items-center space-x-4">
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={onFileSelected}
-                    className="hidden"
-                    accept={uploadType === 'image' ? 'image/*' : uploadType === 'video' ? 'video/*' : uploadType === 'audio' ? 'audio/*' : '*/*'}
+                {/* YouTube Modal */}
+                <YoutubeModal
+                    isOpen={isYoutubeModalOpen}
+                    onClose={() => setIsYoutubeModalOpen(false)}
+                    onInsert={(url) => {
+                        if (editor) {
+                            editor.commands.setYoutubeVideo({ src: url });
+                        }
+                    }}
                 />
 
-                {/* Left Group: Insert, Status, History */}
-                <div className="flex items-center space-x-1">
-                    {/* Insert Menu */}
-                    <div className="relative" ref={insertRef}>
-                        <button
-                            onClick={() => setIsInsertOpen(!isInsertOpen)}
-                            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isInsertOpen ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
-                        >
-                            <Plus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                            <span className="text-sm font-medium">Insert</span>
-                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                        </button>
-
-                        {isInsertOpen && (
-                            <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-2xl border border-gray-200 dark:border-[#333] py-2 z-50 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Essentials</div>
-                                <div className="px-2 space-y-0.5 mb-2">
-                                    <button onClick={() => { editor.chain().focus().toggleTaskList().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <CheckSquare className="w-4 h-4 text-purple-500 dark:text-purple-400" /> <span>Task List</span>
-                                    </button>
-                                    <button onClick={() => { insertTable(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <TableIcon className="w-4 h-4 text-blue-500 dark:text-blue-400" /> <span>Table</span>
-                                    </button>
-                                    <button onClick={() => { setLink(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <LinkIcon className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> <span>Link</span>
-                                    </button>
-                                    <button onClick={() => { handleFileUpload('image'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <ImageIcon className="w-4 h-4 text-green-500 dark:text-green-400" /> <span>Image</span>
-                                    </button>
+                {/* Link Modal - rendered via Portal */}
+                {isLinkModalOpen && ReactDOM.createPortal(
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center" onClick={() => setIsLinkModalOpen(false)}>
+                        <div className="bg-white dark:bg-[#242424] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#333] w-[420px] p-0 animate-in fade-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between px-6 pt-5 pb-3">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Insert Link</h3>
+                                <button onClick={() => setIsLinkModalOpen(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#333] rounded-full transition-colors">
+                                    <X className="w-4 h-4 text-gray-500" />
+                                </button>
+                            </div>
+                            <div className="px-6 pb-2 space-y-3">
+                                <div>
+                                    <label className="block text-[13px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">URL</label>
+                                    <input
+                                        type="url"
+                                        value={linkUrl}
+                                        onChange={(e) => setLinkUrl(e.target.value)}
+                                        placeholder="https://example.com"
+                                        className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#444] rounded-xl text-[14px] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        autoFocus
+                                        onKeyDown={(e) => e.key === 'Enter' && handleLinkInsert()}
+                                    />
                                 </div>
-
-                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Media</div>
-                                <div className="px-2 space-y-0.5 mb-2">
-                                    <button onClick={() => { handleFileUpload('audio'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <Mic className="w-4 h-4 text-red-500 dark:text-red-400" /> <span>Audio</span>
-                                    </button>
-                                    <button onClick={() => { handleFileUpload('video'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <Clapperboard className="w-4 h-4 text-blue-500 dark:text-blue-400" /> <span>Upload Video</span>
-                                    </button>
-                                    <button onClick={() => {
-                                        setIsYoutubeModalOpen(true);
-                                        setIsInsertOpen(false);
-                                    }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <Clapperboard className="w-4 h-4 text-pink-500 dark:text-pink-400" /> <span>YouTube</span>
-                                    </button>
-                                    <button onClick={() => { handleFileUpload('drive'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <HardDrive className="w-4 h-4 text-yellow-500 dark:text-yellow-400" /> <span>Google Drive</span>
-                                    </button>
-                                    <button onClick={() => { handleFileUpload('attachment'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <Paperclip className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Attachment</span>
-                                    </button>
-                                </div>
-
-                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Formatting</div>
-                                <div className="px-2 space-y-0.5 mb-2">
-                                    <button onClick={() => { editor.chain().focus().toggleBlockquote().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <QuoteIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Quote</span>
-                                    </button>
-                                    <button onClick={() => { editor.chain().focus().toggleCodeBlock().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <Code2 className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Code Block</span>
-                                    </button>
-                                    <button onClick={() => { editor.chain().focus().setHorizontalRule().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <MinusIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Divider</span>
-                                    </button>
-                                </div>
-
-                                <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Advanced</div>
-                                <div className="px-2 space-y-0.5">
-                                    <button onClick={() => {
-                                        const date = new Date().toLocaleDateString();
-                                        editor.chain().focus().insertContent(date).run();
-                                        setIsInsertOpen(false);
-                                    }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <CalendarDays className="w-4 h-4 text-orange-500 dark:text-orange-400" /> <span>Date</span>
-                                    </button>
-                                    <button onClick={() => {
-                                        const time = new Date().toLocaleTimeString();
-                                        editor.chain().focus().insertContent(time).run();
-                                        setIsInsertOpen(false);
-                                    }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
-                                        <Clock className="w-4 h-4 text-teal-500 dark:text-teal-400" /> <span>Time</span>
-                                    </button>
+                                <div>
+                                    <label className="block text-[13px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Display Text <span className="text-gray-400 font-normal">(optional)</span></label>
+                                    <input
+                                        type="text"
+                                        value={linkText}
+                                        onChange={(e) => setLinkText(e.target.value)}
+                                        placeholder="Link text"
+                                        className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#444] rounded-xl text-[14px] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                        onKeyDown={(e) => e.key === 'Enter' && handleLinkInsert()}
+                                    />
                                 </div>
                             </div>
-                        )}
-                    </div>
-
-
-
-
-                    <button onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Undo">
-                        <CornerUpLeft className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Redo">
-                        <CornerUpRight className="w-4 h-4" />
-                    </button>
-                </div>
-
-                <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
-
-                {/* Center/Right Group: AI, Font, More */}
-                {/* Center/Right Group: AI, Font, More */}
-                <div className="flex items-center space-x-2">
-                    {/* AI Menu */}
-                    <div className="relative" ref={aiRef}>
-                        <button
-                            onClick={() => setIsAIOpen(!isAIOpen)}
-                            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isAIOpen ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'}`}
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            <span className="text-sm font-semibold">AI</span>
-                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                        </button>
-                        <AIMenu
-                            isOpen={isAIOpen}
-                            onClose={() => setIsAIOpen(false)}
-                            onAction={handleAIAction}
-                            isLoading={isAILoading}
-                            error={aiError}
-                            isDemoMode={isDemoMode}
-                            onToggleDemoMode={() => setIsDemoMode(!isDemoMode)}
-                            triggerRef={aiRef}
-                        />
-                    </div>
-
-                    <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
-
-
-
-                    <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
-
-
-
-                    {/* Font Family */}
-                    <div className="relative" ref={fontFamilyRef}>
-                        <button
-                            onClick={() => setIsFontFamilyOpen(!isFontFamilyOpen)}
-                            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isFontFamilyOpen ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-200 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
-                        >
-                            <span className="text-sm w-20 truncate text-left font-medium">
-                                {editor.getAttributes('textStyle').fontFamily || 'Sans Serif'}
-                            </span>
-                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                        </button>
-                        {isFontFamilyOpen && (
-                            <div className="absolute top-full left-0 mt-2 w-40 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-50">
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Inter').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] font-sans">Inter</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Arial').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Arial' }}>Arial</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Helvetica').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Helvetica' }}>Helvetica</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Times New Roman').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Times New Roman' }}>Times New Roman</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Garamond').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Garamond' }}>Garamond</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Georgia').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Georgia' }}>Georgia</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Courier New').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Courier New' }}>Courier New</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Verdana').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Verdana' }}>Verdana</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Tahoma').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Tahoma' }}>Tahoma</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Trebuchet MS').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Trebuchet MS' }}>Trebuchet MS</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Impact').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Impact' }}>Impact</button>
-                                <button onClick={() => { editor.chain().focus().setFontFamily('Comic Sans MS').run(); setIsFontFamilyOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]" style={{ fontFamily: 'Comic Sans MS' }}>Comic Sans MS</button>
-                            </div>
-                        )}
-                    </div>
-
-                    <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
-
-                    {/* Zen Mode Toggle */}
-                    <button
-                        onClick={onToggleZenMode}
-                        className={`p-2 rounded-lg transition-all duration-200 ${isZenMode ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200'}`}
-                        title={isZenMode ? "Exit Zen Mode" : "Enter Zen Mode"}
-                    >
-                        {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                    </button>
-
-                    <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
-
-                    {/* Font Size */}
-                    <div className="relative" ref={fontSizeRef}>
-                        <button
-                            onClick={() => setIsFontSizeOpen(!isFontSizeOpen)}
-                            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isFontSizeOpen ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-200 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
-                        >
-                            <span className="text-sm w-8 text-center font-medium">
-                                {editor.getAttributes('textStyle').fontSize || 'Auto'}
-                            </span>
-                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-                        </button>
-                        {isFontSizeOpen && (
-                            <div className="absolute top-full left-0 mt-2 w-20 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-50 max-h-48 overflow-y-auto custom-scrollbar">
-                                {[12, 13, 14, 15, 16, 18, 20, 24, 30].map(size => (
+                            <div className="flex items-center justify-end space-x-2 px-6 py-4">
+                                {linkUrl && (
                                     <button
-                                        key={size}
                                         onClick={() => {
-                                            // Use the custom FontSize extension
-                                            editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
-                                            setIsFontSizeOpen(false);
+                                            editor.chain().focus().extendMarkRange('link').unsetLink().run();
+                                            setIsLinkModalOpen(false);
+                                            setLinkUrl('');
+                                            setLinkText('');
                                         }}
-                                        className="w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]"
+                                        className="px-4 py-2 text-[13px] font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                     >
-                                        {size}
+                                        Remove Link
                                     </button>
-                                ))}
+                                )}
+                                <button
+                                    onClick={() => setIsLinkModalOpen(false)}
+                                    className="px-4 py-2 text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] rounded-lg transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleLinkInsert}
+                                    disabled={!linkUrl}
+                                    className="px-5 py-2 text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:dark:bg-gray-600 disabled:text-gray-500 rounded-lg transition-colors"
+                                >
+                                    Insert
+                                </button>
                             </div>
-                        )}
+                        </div>
+                    </div>,
+                    document.body
+                )}
+
+                {/* Image URL Modal - rendered via Portal */}
+                {isImageUrlModalOpen && ReactDOM.createPortal(
+                    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[9999] flex items-center justify-center" onClick={() => setIsImageUrlModalOpen(false)}>
+                        <div className="bg-white dark:bg-[#242424] rounded-2xl shadow-2xl border border-gray-200 dark:border-[#333] w-[420px] p-0 animate-in fade-in zoom-in-95 duration-150" onClick={e => e.stopPropagation()}>
+                            <div className="flex items-center justify-between px-6 pt-5 pb-3">
+                                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">Insert Image from URL</h3>
+                                <button onClick={() => setIsImageUrlModalOpen(false)} className="p-1.5 hover:bg-gray-100 dark:hover:bg-[#333] rounded-full transition-colors">
+                                    <X className="w-4 h-4 text-gray-500" />
+                                </button>
+                            </div>
+                            <div className="px-6 pb-2">
+                                <label className="block text-[13px] font-medium text-gray-600 dark:text-gray-400 mb-1.5">Image URL</label>
+                                <input
+                                    type="url"
+                                    value={imageUrl}
+                                    onChange={(e) => setImageUrl(e.target.value)}
+                                    placeholder="https://example.com/image.png"
+                                    className="w-full px-3 py-2.5 bg-gray-50 dark:bg-[#1a1a1a] border border-gray-300 dark:border-[#444] rounded-xl text-[14px] text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    autoFocus
+                                    onKeyDown={(e) => e.key === 'Enter' && handleImageUrlInsert()}
+                                />
+                                {imageUrl && (
+                                    <div className="mt-3 rounded-xl overflow-hidden border border-gray-200 dark:border-[#333] bg-gray-50 dark:bg-[#1a1a1a] p-2">
+                                        <img src={imageUrl} alt="Preview" className="max-h-32 mx-auto rounded-lg object-contain" onError={(e) => e.target.style.display = 'none'} />
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex items-center justify-between px-6 py-4">
+                                <button
+                                    onClick={() => {
+                                        setIsImageUrlModalOpen(false);
+                                        handleFileUpload('image');
+                                    }}
+                                    className="px-4 py-2 text-[13px] font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors flex items-center space-x-1.5"
+                                >
+                                    <FilePlus className="w-4 h-4" />
+                                    <span>Upload from device</span>
+                                </button>
+                                <div className="flex items-center space-x-2">
+                                    <button
+                                        onClick={() => setIsImageUrlModalOpen(false)}
+                                        className="px-4 py-2 text-[13px] font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#333] rounded-lg transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleImageUrlInsert}
+                                        disabled={!imageUrl}
+                                        className="px-5 py-2 text-[13px] font-semibold text-white bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:dark:bg-gray-600 disabled:text-gray-500 rounded-lg transition-colors"
+                                    >
+                                        Insert
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )}
+                <div className="flex items-center space-x-4">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={onFileSelected}
+                        className="hidden"
+                        accept={uploadType === 'image' ? 'image/*' : uploadType === 'video' ? 'video/*' : uploadType === 'audio' ? 'audio/*' : '*/*'}
+                    />
+
+                    {/* Left Group: Insert, Status, History */}
+                    <div className="flex items-center space-x-1">
+                        {/* Insert Menu */}
+                        <div className="relative" ref={insertRef}>
+                            <button
+                                onClick={() => setIsInsertOpen(!isInsertOpen)}
+                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isInsertOpen ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                            >
+                                <Plus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                <span className="text-sm font-medium">Insert</span>
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                            </button>
+
+                            {isInsertOpen && (
+                                <div className="absolute top-full left-0 mt-2 w-72 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-2xl border border-gray-200 dark:border-[#333] py-2 z-50 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider">Essentials</div>
+                                    <div className="px-2 space-y-0.5 mb-2">
+                                        <button onClick={() => { editor.chain().focus().toggleTaskList().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <CheckSquare className="w-4 h-4 text-purple-500 dark:text-purple-400" /> <span>Task List</span>
+                                        </button>
+                                        <button onClick={() => { insertTable(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <TableIcon className="w-4 h-4 text-blue-500 dark:text-blue-400" /> <span>Table</span>
+                                        </button>
+                                        <button onClick={() => { setIsInsertOpen(false); setLink(); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <LinkIcon className="w-4 h-4 text-indigo-500 dark:text-indigo-400" /> <span>Link</span>
+                                        </button>
+                                        <button onClick={() => { setIsInsertOpen(false); addImage(); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <ImageIcon className="w-4 h-4 text-green-500 dark:text-green-400" /> <span>Image</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Media</div>
+                                    <div className="px-2 space-y-0.5 mb-2">
+                                        <button onClick={() => { handleFileUpload('audio'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <Mic className="w-4 h-4 text-red-500 dark:text-red-400" /> <span>Audio</span>
+                                        </button>
+                                        <button onClick={() => { handleFileUpload('video'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <Clapperboard className="w-4 h-4 text-blue-500 dark:text-blue-400" /> <span>Upload Video</span>
+                                        </button>
+                                        <button onClick={() => {
+                                            setIsYoutubeModalOpen(true);
+                                            setIsInsertOpen(false);
+                                        }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <Clapperboard className="w-4 h-4 text-pink-500 dark:text-pink-400" /> <span>YouTube</span>
+                                        </button>
+                                        <button onClick={() => { handleFileUpload('drive'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <HardDrive className="w-4 h-4 text-yellow-500 dark:text-yellow-400" /> <span>Google Drive</span>
+                                        </button>
+                                        <button onClick={() => { handleFileUpload('attachment'); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <Paperclip className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Attachment</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Formatting</div>
+                                    <div className="px-2 space-y-0.5 mb-2">
+                                        <button onClick={() => { editor.chain().focus().toggleBlockquote().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <QuoteIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Quote</span>
+                                        </button>
+                                        <button onClick={() => { editor.chain().focus().toggleCodeBlock().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <Code2 className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Code Block</span>
+                                        </button>
+                                        <button onClick={() => { editor.chain().focus().setHorizontalRule().run(); setIsInsertOpen(false); }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <MinusIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" /> <span>Divider</span>
+                                        </button>
+                                    </div>
+
+                                    <div className="px-2 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-wider mt-2">Advanced</div>
+                                    <div className="px-2 space-y-0.5">
+                                        <button onClick={() => {
+                                            const date = new Date().toLocaleDateString();
+                                            editor.chain().focus().insertContent(date).run();
+                                            setIsInsertOpen(false);
+                                        }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <CalendarDays className="w-4 h-4 text-orange-500 dark:text-orange-400" /> <span>Date</span>
+                                        </button>
+                                        <button onClick={() => {
+                                            const time = new Date().toLocaleTimeString();
+                                            editor.chain().focus().insertContent(time).run();
+                                            setIsInsertOpen(false);
+                                        }} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded flex items-center space-x-3 transition-colors">
+                                            <Clock className="w-4 h-4 text-teal-500 dark:text-teal-400" /> <span>Time</span>
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+
+
+
+                        <button onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Undo">
+                            <CornerUpLeft className="w-4 h-4" />
+                        </button>
+                        <button onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Redo">
+                            <CornerUpRight className="w-4 h-4" />
+                        </button>
                     </div>
 
                     <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
 
-                    {/* More Menu */}
-                    <div className="relative" ref={moreRef}>
+                    {/* Center/Right Group: AI, Font, More */}
+                    {/* Center/Right Group: AI, Font, More */}
+                    <div className="flex items-center space-x-2">
+                        {/* AI Menu */}
+                        <div className="relative" ref={aiRef}>
+                            <button
+                                onClick={() => setIsAIOpen(!isAIOpen)}
+                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isAIOpen ? 'bg-gradient-to-r from-indigo-50 to-purple-50 dark:from-indigo-900/20 dark:to-purple-900/20 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-indigo-200 dark:ring-indigo-800' : 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10'}`}
+                            >
+                                <Sparkles className="w-4 h-4" />
+                                <span className="text-sm font-semibold">AI</span>
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                            </button>
+                            <AIMenu
+                                isOpen={isAIOpen}
+                                onClose={() => setIsAIOpen(false)}
+                                onAction={handleAIAction}
+                                isLoading={isAILoading}
+                                error={aiError}
+                                isDemoMode={isDemoMode}
+                                onToggleDemoMode={() => setIsDemoMode(!isDemoMode)}
+                                triggerRef={aiRef}
+                            />
+                        </div>
+
+                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+
+
+
+                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+
+
+
+                        {/* Font Family */}
+                        <div className="relative" ref={fontFamilyRef}>
+                            <button
+                                onClick={() => setIsFontFamilyOpen(!isFontFamilyOpen)}
+                                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-200 ${isFontFamilyOpen ? 'bg-gray-100 dark:bg-white/8 text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                            >
+                                <span className="text-[13px] w-[88px] truncate text-left font-medium leading-none">
+                                    {editor.getAttributes('textStyle').fontFamily || 'Sans Serif'}
+                                </span>
+                                <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform duration-200 ${isFontFamilyOpen ? 'rotate-180' : ''}`} />
+                            </button>
+                            {isFontFamilyOpen && (
+                                <div className="absolute top-full left-0 mt-1.5 w-52 bg-white dark:bg-[#202020] rounded-xl shadow-2xl border border-gray-100 dark:border-white/8 py-2 z-50 overflow-hidden">
+                                    {/* Sans-Serif Group */}
+                                    <div className="px-3 pt-1 pb-0.5">
+                                        <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Sans-Serif</span>
+                                    </div>
+                                    {[
+                                        { name: 'Nunito', label: 'Nunito' },
+                                        { name: 'Inter', label: 'Inter' },
+                                        { name: 'Arial', label: 'Arial' },
+                                        { name: 'Helvetica', label: 'Helvetica' },
+                                        { name: 'Verdana', label: 'Verdana' },
+                                        { name: 'Tahoma', label: 'Tahoma' },
+                                        { name: 'Trebuchet MS', label: 'Trebuchet MS' },
+                                    ].map(f => {
+                                        const isActive = (editor.getAttributes('textStyle').fontFamily || '') === f.name;
+                                        return (
+                                            <button
+                                                key={f.name}
+                                                onClick={() => { editor.chain().focus().setFontFamily(f.name).run(); setIsFontFamilyOpen(false); }}
+                                                className={`w-full text-left px-3 py-1.5 text-[13.5px] flex items-center justify-between group transition-colors rounded-md mx-1 ${isActive ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                                                style={{ fontFamily: f.name, width: 'calc(100% - 8px)' }}
+                                            >
+                                                {f.label}
+                                                {isActive && <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                            </button>
+                                        );
+                                    })}
+
+                                    <div className="h-px bg-gray-100 dark:bg-white/6 my-1.5 mx-2" />
+
+                                    {/* Serif Group */}
+                                    <div className="px-3 pt-1 pb-0.5">
+                                        <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Serif</span>
+                                    </div>
+                                    {[
+                                        { name: 'Times New Roman', label: 'Times New Roman' },
+                                        { name: 'Garamond', label: 'Garamond' },
+                                        { name: 'Georgia', label: 'Georgia' },
+                                    ].map(f => {
+                                        const isActive = (editor.getAttributes('textStyle').fontFamily || '') === f.name;
+                                        return (
+                                            <button
+                                                key={f.name}
+                                                onClick={() => { editor.chain().focus().setFontFamily(f.name).run(); setIsFontFamilyOpen(false); }}
+                                                className={`w-full text-left px-3 py-1.5 text-[13.5px] flex items-center justify-between transition-colors rounded-md mx-1 ${isActive ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                                                style={{ fontFamily: f.name, width: 'calc(100% - 8px)' }}
+                                            >
+                                                {f.label}
+                                                {isActive && <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                            </button>
+                                        );
+                                    })}
+
+                                    <div className="h-px bg-gray-100 dark:bg-white/6 my-1.5 mx-2" />
+
+                                    {/* Monospace Group */}
+                                    <div className="px-3 pt-1 pb-0.5">
+                                        <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Monospace</span>
+                                    </div>
+                                    {[{ name: 'Courier New', label: 'Courier New' }].map(f => {
+                                        const isActive = (editor.getAttributes('textStyle').fontFamily || '') === f.name;
+                                        return (
+                                            <button
+                                                key={f.name}
+                                                onClick={() => { editor.chain().focus().setFontFamily(f.name).run(); setIsFontFamilyOpen(false); }}
+                                                className={`w-full text-left px-3 py-1.5 text-[13.5px] flex items-center justify-between transition-colors rounded-md mx-1 ${isActive ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                                                style={{ fontFamily: f.name, width: 'calc(100% - 8px)' }}
+                                            >
+                                                {f.label}
+                                                {isActive && <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                            </button>
+                                        );
+                                    })}
+
+                                    <div className="h-px bg-gray-100 dark:bg-white/6 my-1.5 mx-2" />
+
+                                    {/* Display Group */}
+                                    <div className="px-3 pt-1 pb-0.5">
+                                        <span className="text-[10px] font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-widest">Display</span>
+                                    </div>
+                                    {[
+                                        { name: 'Impact', label: 'Impact' },
+                                        { name: 'Comic Sans MS', label: 'Comic Sans MS' },
+                                    ].map(f => {
+                                        const isActive = (editor.getAttributes('textStyle').fontFamily || '') === f.name;
+                                        return (
+                                            <button
+                                                key={f.name}
+                                                onClick={() => { editor.chain().focus().setFontFamily(f.name).run(); setIsFontFamilyOpen(false); }}
+                                                className={`w-full text-left px-3 py-1.5 text-[13.5px] flex items-center justify-between transition-colors rounded-md mx-1 ${isActive ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10' : 'text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5'}`}
+                                                style={{ fontFamily: f.name, width: 'calc(100% - 8px)' }}
+                                            >
+                                                {f.label}
+                                                {isActive && <svg className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                                            </button>
+                                        );
+                                    })}
+
+                                    <div className="h-px bg-gray-100 dark:bg-white/6 my-1.5 mx-2" />
+                                    {/* Reset to default */}
+                                    <button
+                                        onClick={() => { editor.chain().focus().unsetFontFamily().run(); setIsFontFamilyOpen(false); }}
+                                        className="w-full text-left px-3 py-1.5 text-[12.5px] text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-white/5 transition-colors rounded-md mx-1 italic"
+                                        style={{ width: 'calc(100% - 8px)' }}
+                                    >
+                                        ↩ Reset to default
+                                    </button>
+                                    <div className="pb-1" />
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+
+                        {/* Zen Mode Toggle */}
                         <button
-                            onClick={() => setIsMoreOpen(!isMoreOpen)}
-                            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isMoreOpen ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-200 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                            onClick={onToggleZenMode}
+                            className={`p-2 rounded-lg transition-all duration-200 ${isZenMode ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                            title={isZenMode ? "Exit Zen Mode" : "Enter Zen Mode"}
                         >
-                            <span className="text-sm font-medium">More</span>
-                            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                            {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                         </button>
 
-                        {isMoreOpen && (
-                            <div className="absolute top-full right-0 mt-2 w-72 bg-white dark:bg-[#1e1e1e] rounded-xl shadow-2xl border border-gray-200 dark:border-[#333] py-2 z-50 max-h-[80vh] overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-100">
-                                {/* Font Color Picker */}
-                                <div className="px-4 py-3 border-b border-gray-200 dark:border-[#333]">
-                                    <button className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center justify-between transition-colors group">
-                                        <div className="flex items-center space-x-3">
-                                            <div className="w-5 h-5 rounded-full shadow-sm ring-1 ring-black/10 dark:ring-white/10" style={{ background: 'linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%)' }}></div>
-                                            <span className="font-medium group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Font color</span>
+                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+
+                        {/* Font Size */}
+                        <div className="relative" ref={fontSizeRef}>
+                            <button
+                                onClick={() => setIsFontSizeOpen(!isFontSizeOpen)}
+                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isFontSizeOpen ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-200 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                            >
+                                <span className="text-sm w-8 text-center font-medium">
+                                    {editor.getAttributes('textStyle').fontSize || 'Auto'}
+                                </span>
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                            </button>
+                            {isFontSizeOpen && (
+                                <div className="absolute top-full left-0 mt-2 w-20 bg-white dark:bg-[#1e1e1e] rounded-lg shadow-xl border border-gray-200 dark:border-[#333] py-1 z-50 max-h-48 overflow-y-auto custom-scrollbar">
+                                    {[12, 13, 14, 15, 16, 18, 20, 24, 30].map(size => (
+                                        <button
+                                            key={size}
+                                            onClick={() => {
+                                                // Use the custom FontSize extension
+                                                editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
+                                                setIsFontSizeOpen(false);
+                                            }}
+                                            className="w-full text-left px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-[#2d2d2d]"
+                                        >
+                                            {size}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+
+                        {/* More Menu */}
+                        <div className="relative" ref={moreRef}>
+                            <button
+                                onClick={() => {
+                                    if (!isMoreOpen && moreRef.current) {
+                                        const rect = moreRef.current.getBoundingClientRect();
+                                        setMoreMenuPos({
+                                            top: rect.bottom + window.scrollY + 8,
+                                            right: window.innerWidth - rect.right,
+                                        });
+                                    }
+                                    setIsMoreOpen(!isMoreOpen);
+                                }}
+                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isMoreOpen ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-200 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                            >
+                                <span className="text-sm font-medium">More</span>
+                                <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
+                            </button>
+
+                            {isMoreOpen && ReactDOM.createPortal(
+                                <div
+                                    style={{ top: moreMenuPos.top, right: moreMenuPos.right }}
+                                    className="fixed w-[300px] bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-2xl border border-gray-200/80 dark:border-[#333] py-1.5 z-[9999] max-h-[80vh] overflow-y-auto custom-scrollbar"
+                                >
+
+                                    {/* Note Stats Bar */}
+                                    {(() => {
+                                        const text = editor.getText();
+                                        const words = text.split(/\s+/).filter(w => w.length > 0).length;
+                                        const chars = text.length;
+                                        const readingTime = Math.max(1, Math.ceil(words / 200));
+                                        return (
+                                            <div className="px-4 py-3 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                                <div className="flex items-center justify-between text-[11px] text-gray-500 dark:text-gray-400">
+                                                    <div className="flex items-center space-x-1">
+                                                        <FileText className="w-3 h-3" />
+                                                        <span>{words} words</span>
+                                                    </div>
+                                                    <span>{chars} chars</span>
+                                                    <div className="flex items-center space-x-1">
+                                                        <Clock className="w-3 h-3" />
+                                                        <span>{readingTime} min read</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+
+                                    {/* Headings */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1.5">Headings</div>
+                                        <div className="grid grid-cols-3 gap-1 px-1">
+                                            <button onClick={() => { editor.chain().focus().toggleHeading({ level: 1 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
+                                                H1
+                                            </button>
+                                            <button onClick={() => { editor.chain().focus().toggleHeading({ level: 2 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
+                                                H2
+                                            </button>
+                                            <button onClick={() => { editor.chain().focus().toggleHeading({ level: 3 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
+                                                H3
+                                            </button>
                                         </div>
-                                        <ChevronDown className="w-4 h-4 text-gray-500 group-hover:text-gray-700 dark:group-hover:text-gray-300 transition-colors" />
-                                    </button>
+                                    </div>
 
-                                    {/* Color Palette */}
-                                    <div className="mt-3 p-3 bg-gray-50 dark:bg-[#262626] rounded-xl border border-gray-200 dark:border-[#333]">
-                                        <div className="grid grid-cols-7 gap-2 mb-2">
-                                            <button onClick={() => editor.chain().focus().unsetColor().run()} className="w-6 h-6 rounded-full bg-white border border-gray-300 dark:border-gray-600 hover:scale-110 hover:border-gray-400 dark:hover:border-white transition-all shadow-sm" title="Auto"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#9ca3af').run()} className="w-6 h-6 rounded-full bg-gray-400 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#6b7280').run()} className="w-6 h-6 rounded-full bg-gray-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#4b5563').run()} className="w-6 h-6 rounded-full bg-gray-600 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#1f2937').run()} className="w-6 h-6 rounded-full bg-gray-800 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#8b5cf6').run()} className="w-6 h-6 rounded-full bg-purple-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#d946ef').run()} className="w-6 h-6 rounded-full bg-fuchsia-500 hover:scale-110 transition-transform shadow-sm"></button>
+                                    {/* Font Color & Highlight */}
+                                    <div className="px-3 py-2.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="flex items-center justify-between pb-2">
+                                            <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-1">Colors</div>
+                                            {activeColor && (
+                                                <button
+                                                    onMouseDown={(e) => {
+                                                        e.preventDefault();
+                                                        setActiveColor(null);
+                                                        editor.chain().unsetColor().run();
+                                                    }}
+                                                    className="flex items-center space-x-1 text-[10px] text-red-500 hover:text-red-600 px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/20 transition-colors"
+                                                >
+                                                    <X className="w-2.5 h-2.5" />
+                                                    <span>Reset color</span>
+                                                </button>
+                                            )}
                                         </div>
-                                        <div className="grid grid-cols-7 gap-2">
-                                            <button onClick={() => editor.chain().focus().setColor('#ef4444').run()} className="w-6 h-6 rounded-full bg-red-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#f97316').run()} className="w-6 h-6 rounded-full bg-orange-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#eab308').run()} className="w-6 h-6 rounded-full bg-yellow-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#22c55e').run()} className="w-6 h-6 rounded-full bg-green-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#06b6d4').run()} className="w-6 h-6 rounded-full bg-cyan-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#3b82f6').run()} className="w-6 h-6 rounded-full bg-blue-500 hover:scale-110 transition-transform shadow-sm"></button>
-                                            <button onClick={() => editor.chain().focus().setColor('#6366f1').run()} className="w-6 h-6 rounded-full bg-indigo-500 hover:scale-110 transition-transform shadow-sm"></button>
+                                        <div className="space-y-2.5">
+                                            <div>
+                                                <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 px-1 font-medium">Font color</div>
+                                                <div className="flex items-center space-x-1.5 px-0.5">
+                                                    {/* Default / reset color */}
+                                                    <button
+                                                        onMouseDown={(e) => {
+                                                            e.preventDefault();
+                                                            setActiveColor(null);
+                                                            editor.chain().unsetColor().run();
+                                                        }}
+                                                        className={`w-6 h-6 rounded-full bg-white border-2 hover:scale-110 transition-all ${!activeColor ? 'border-blue-500 ring-1 ring-blue-400' : 'border-gray-300 dark:border-gray-500 hover:border-gray-500'}`}
+                                                        title="Default"
+                                                    ></button>
+                                                    {['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#d946ef', '#6b7280', '#1f2937'].map(c => (
+                                                        <button
+                                                            key={c}
+                                                            onMouseDown={(e) => {
+                                                                // CRITICAL: prevent focus loss so stored marks survive
+                                                                e.preventDefault();
+                                                                setActiveColor(c);
+                                                                editor.chain().setColor(c).run();
+                                                            }}
+                                                            className={`w-6 h-6 rounded-full hover:scale-110 transition-transform shadow-sm ${activeColor === c ? 'ring-2 ring-offset-1 ring-blue-500 ring-offset-white dark:ring-offset-[#1e1e1e] scale-110' : 'ring-1 ring-black/5'}`}
+                                                            style={{ backgroundColor: c }}
+                                                            title={c}
+                                                        ></button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 px-1 font-medium">Highlight</div>
+                                                <div className="flex items-center space-x-1.5 px-0.5">
+                                                    <button
+                                                        onMouseDown={(e) => { e.preventDefault(); editor.chain().unsetHighlight().run(); }}
+                                                        className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-500 flex items-center justify-center hover:scale-110 transition-all"
+                                                        title="None"
+                                                    >
+                                                        <X className="w-3 h-3 text-gray-400" />
+                                                    </button>
+                                                    {[{ c: '#fef08a', t: 'Yellow' }, { c: '#bbf7d0', t: 'Green' }, { c: '#bfdbfe', t: 'Blue' }, { c: '#fbcfe8', t: 'Pink' }, { c: '#e9d5ff', t: 'Purple' }, { c: '#fed7aa', t: 'Orange' }, { c: '#fecaca', t: 'Red' }].map(h => (
+                                                        <button
+                                                            key={h.c}
+                                                            onMouseDown={(e) => { e.preventDefault(); editor.chain().toggleHighlight({ color: h.c }).run(); }}
+                                                            className="w-6 h-6 rounded-full hover:scale-110 transition-transform shadow-sm ring-1 ring-black/5"
+                                                            style={{ backgroundColor: h.c }}
+                                                            title={h.t}
+                                                        ></button>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                {/* Highlight Section */}
-                                <div className="px-4 py-3 border-b border-gray-200 dark:border-[#333]">
-                                    <div className="text-[10px] font-bold text-gray-500 mb-3 uppercase tracking-wider px-1">Highlight</div>
-                                    <div className="flex items-center justify-between px-1">
-                                        <button onClick={() => editor.chain().focus().unsetHighlight().run()} className="w-7 h-7 rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-[#2d2d2d] hover:border-gray-400 transition-colors" title="None">
-                                            <X className="w-3.5 h-3.5 text-gray-400" />
-                                        </button>
-                                        <button onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()} className="w-7 h-7 rounded-full bg-[#fef08a] border border-transparent hover:scale-110 transition-transform shadow-sm" title="Yellow"></button>
-                                        <button onClick={() => editor.chain().focus().toggleHighlight({ color: '#bbf7d0' }).run()} className="w-7 h-7 rounded-full bg-[#bbf7d0] border border-transparent hover:scale-110 transition-transform shadow-sm" title="Green"></button>
-                                        <button onClick={() => editor.chain().focus().toggleHighlight({ color: '#bfdbfe' }).run()} className="w-7 h-7 rounded-full bg-[#bfdbfe] border border-transparent hover:scale-110 transition-transform shadow-sm" title="Blue"></button>
-                                        <button onClick={() => editor.chain().focus().toggleHighlight({ color: '#fbcfe8' }).run()} className="w-7 h-7 rounded-full bg-[#fbcfe8] border border-transparent hover:scale-110 transition-transform shadow-sm" title="Pink"></button>
-                                        <button onClick={() => editor.chain().focus().toggleHighlight({ color: '#e9d5ff' }).run()} className="w-7 h-7 rounded-full bg-[#e9d5ff] border border-transparent hover:scale-110 transition-transform shadow-sm" title="Purple"></button>
+                                    {/* Text Formatting */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1">Format</div>
+                                        {[
+                                            { fn: () => editor.chain().focus().toggleBold().run(), icon: Bold, label: 'Bold', shortcut: '⌘B', active: editor.isActive('bold') },
+                                            { fn: () => editor.chain().focus().toggleItalic().run(), icon: Italic, label: 'Italic', shortcut: '⌘I', active: editor.isActive('italic') },
+                                            { fn: () => editor.chain().focus().toggleUnderline().run(), icon: UnderlineIcon, label: 'Underline', shortcut: '⌘U', active: editor.isActive('underline') },
+                                            { fn: () => editor.chain().focus().toggleStrike().run(), icon: Strikethrough, label: 'Strikethrough', shortcut: '⌘⇧X', active: editor.isActive('strike') },
+                                            { fn: () => editor.chain().focus().toggleCode().run(), icon: Code, label: 'Inline Code', shortcut: '⌘E', active: editor.isActive('code') },
+                                        ].map((item, i) => (
+                                            <button key={i} onClick={item.fn} className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center justify-between transition-colors ${item.active ? 'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                <div className="flex items-center space-x-2.5">
+                                                    <item.icon className="w-4 h-4" />
+                                                    <span className="font-medium">{item.label}</span>
+                                                </div>
+                                                <span className="text-[11px] text-gray-400 dark:text-gray-500 font-mono">{item.shortcut}</span>
+                                            </button>
+                                        ))}
                                     </div>
-                                </div>
 
-                                {/* Text Formatting */}
-                                <div className="px-2 py-2 border-b border-gray-200 dark:border-[#333]">
-                                    <div className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider px-3 pt-1">Format</div>
-                                    <button onClick={() => editor.chain().focus().toggleBold().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('bold') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <Bold className="w-4 h-4" /> <span className="font-medium">Bold</span>
-                                    </button>
-                                    <button onClick={() => editor.chain().focus().toggleItalic().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('italic') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <Italic className="w-4 h-4" /> <span className="font-medium">Italic</span>
-                                    </button>
-                                    <button onClick={() => editor.chain().focus().toggleUnderline().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('underline') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <UnderlineIcon className="w-4 h-4" /> <span className="font-medium">Underline</span>
-                                    </button>
-                                    <button onClick={() => editor.chain().focus().toggleStrike().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('strike') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <Strikethrough className="w-4 h-4" /> <span className="font-medium">Strikethrough</span>
-                                    </button>
-                                </div>
+                                    {/* Lists & Structure */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1">Structure</div>
+                                        {[
+                                            { fn: () => editor.chain().focus().toggleBulletList().run(), icon: List, label: 'Bullet List', active: editor.isActive('bulletList') },
+                                            { fn: () => editor.chain().focus().toggleOrderedList().run(), icon: ListOrdered, label: 'Numbered List', active: editor.isActive('orderedList') },
+                                            { fn: () => editor.chain().focus().toggleTaskList().run(), icon: CheckSquare, label: 'Checklist', active: editor.isActive('taskList') },
+                                            { fn: () => editor.chain().focus().toggleBlockquote().run(), icon: Quote, label: 'Blockquote', active: editor.isActive('blockquote') },
+                                            { fn: () => editor.chain().focus().toggleCodeBlock().run(), icon: Code2, label: 'Code Block', active: editor.isActive('codeBlock') },
+                                            { fn: () => { editor.chain().focus().setHorizontalRule().run(); setIsMoreOpen(false); }, icon: MinusIcon, label: 'Divider', active: false },
+                                        ].map((item, i) => (
+                                            <button key={i} onClick={item.fn} className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors ${item.active ? 'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                <item.icon className="w-4 h-4" />
+                                                <span className="font-medium">{item.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
 
-                                {/* Lists */}
-                                <div className="px-2 py-2 border-b border-gray-200 dark:border-[#333]">
-                                    <div className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider px-3 pt-1">Lists</div>
-                                    <button onClick={() => editor.chain().focus().toggleBulletList().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('bulletList') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <List className="w-4 h-4" /> <span className="font-medium">Bulleted list</span>
-                                    </button>
-                                    <button onClick={() => editor.chain().focus().toggleOrderedList().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('orderedList') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <ListOrdered className="w-4 h-4" /> <span className="font-medium">Numbered list</span>
-                                    </button>
-                                    <button onClick={() => editor.chain().focus().toggleTaskList().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('taskList') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <CheckSquare className="w-4 h-4" /> <span className="font-medium">Checklist</span>
-                                    </button>
-                                </div>
+                                    {/* Callouts */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1">Callouts</div>
+                                        {[
+                                            { label: '💡 Tip', bg: '#fef9c3', darkBg: '#422006', color: '#854d0e' },
+                                            { label: 'ℹ️ Info', bg: '#dbeafe', darkBg: '#1e3a5f', color: '#1e40af' },
+                                            { label: '⚠️ Warning', bg: '#fef3c7', darkBg: '#451a03', color: '#92400e' },
+                                            { label: '🚨 Important', bg: '#fee2e2', darkBg: '#450a0a', color: '#991b1b' },
+                                            { label: '✅ Success', bg: '#dcfce7', darkBg: '#052e16', color: '#166534' },
+                                        ].map((c, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => {
+                                                    editor.chain().focus().insertContent(
+                                                        `<div style="background-color: ${c.bg}; border-left: 4px solid ${c.color}; padding: 12px 16px; border-radius: 8px; margin: 8px 0; font-size: 14px; color: ${c.color};">${c.label}: Your note here</div><p></p>`
+                                                    ).run();
+                                                    setIsMoreOpen(false);
+                                                }}
+                                                className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors font-medium"
+                                            >
+                                                <span>{c.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
 
-                                {/* Insert Link */}
-                                <div className="px-2 py-2 border-b border-gray-200 dark:border-[#333]">
-                                    <button onClick={setLink} className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
-                                        <LinkIcon className="w-4 h-4 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" /> <span className="font-medium group-hover:text-gray-900 dark:group-hover:text-white transition-colors">Insert link</span>
-                                    </button>
-                                </div>
-
-                                {/* Alignment */}
-                                <div className="px-2 py-2 border-b border-gray-200 dark:border-[#333]">
-                                    <div className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider px-3 pt-1">Align</div>
-                                    <div className="flex items-center justify-between px-1">
-                                        <button onClick={() => editor.chain().focus().setTextAlign('left').run()} className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d2d2d] transition-colors ${editor.isActive({ textAlign: 'left' }) ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-500 dark:text-gray-400'}`} title="Left Align">
-                                            <AlignLeft className="w-4 h-4" />
+                                    {/* Insert & Link */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1">Insert</div>
+                                        <button onClick={() => { setIsMoreOpen(false); setLink(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center justify-between transition-colors group">
+                                            <div className="flex items-center space-x-2.5">
+                                                <LinkIcon className="w-4 h-4 text-indigo-500" />
+                                                <span className="font-medium">Insert Link</span>
+                                            </div>
+                                            <span className="text-[11px] text-gray-400 font-mono">⌘K</span>
                                         </button>
-                                        <button onClick={() => editor.chain().focus().setTextAlign('center').run()} className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d2d2d] transition-colors ${editor.isActive({ textAlign: 'center' }) ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-500 dark:text-gray-400'}`} title="Align Center">
-                                            <AlignCenter className="w-4 h-4" />
+                                        <button onClick={() => { setIsMoreOpen(false); addImage(); }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors">
+                                            <ImageIcon className="w-4 h-4 text-green-500" />
+                                            <span className="font-medium">Insert Image</span>
                                         </button>
-                                        <button onClick={() => editor.chain().focus().setTextAlign('right').run()} className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2d2d2d] transition-colors ${editor.isActive({ textAlign: 'right' }) ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-500 dark:text-gray-400'}`} title="Align Right">
-                                            <AlignRight className="w-4 h-4" />
+                                        <button onClick={() => { insertTable(); setIsMoreOpen(false); }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors">
+                                            <TableIcon className="w-4 h-4 text-blue-500" />
+                                            <span className="font-medium">Insert Table</span>
+                                        </button>
+                                        <button onClick={() => {
+                                            const date = new Date();
+                                            editor.chain().focus().insertContent(
+                                                `<p><strong>${date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</strong> — ${date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>`
+                                            ).run();
+                                            setIsMoreOpen(false);
+                                        }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors">
+                                            <CalendarDays className="w-4 h-4 text-orange-500" />
+                                            <span className="font-medium">Insert Date & Time</span>
                                         </button>
                                     </div>
-                                </div>
 
-                                {/* Indent/Outdent */}
-                                <div className="px-2 py-2 border-b border-gray-200 dark:border-[#333]">
-                                    <div className="flex items-center justify-between px-1">
-                                        <button onClick={() => editor.chain().focus().sinkListItem('listItem').run()} disabled={!editor.can().sinkListItem('listItem')} className="flex-1 text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center justify-center space-x-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                                            <Indent className="w-4 h-4" /> <span>Indent</span>
+                                    {/* Alignment */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1">Align</div>
+                                        <div className="flex items-center space-x-1 px-2">
+                                            {[
+                                                { fn: () => editor.chain().focus().setTextAlign('left').run(), icon: AlignLeft, label: 'Left', active: editor.isActive({ textAlign: 'left' }) },
+                                                { fn: () => editor.chain().focus().setTextAlign('center').run(), icon: AlignCenter, label: 'Center', active: editor.isActive({ textAlign: 'center' }) },
+                                                { fn: () => editor.chain().focus().setTextAlign('right').run(), icon: AlignRight, label: 'Right', active: editor.isActive({ textAlign: 'right' }) },
+                                                { fn: () => editor.chain().focus().setTextAlign('justify').run(), icon: AlignJustify, label: 'Justify', active: editor.isActive({ textAlign: 'justify' }) },
+                                            ].map((item, i) => (
+                                                <button key={i} onClick={item.fn} className={`flex-1 flex flex-col items-center py-1.5 rounded-lg transition-all ${item.active ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] hover:text-gray-700 dark:hover:text-gray-200'}`} title={item.label}>
+                                                    <item.icon className="w-4 h-4" />
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Indent/Outdent */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="flex items-center space-x-1 px-1">
+                                            <button onClick={() => editor.chain().focus().sinkListItem('listItem').run()} disabled={!editor.can().sinkListItem('listItem')} className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg disabled:opacity-25 disabled:cursor-not-allowed transition-colors font-medium">
+                                                <Indent className="w-4 h-4" /> <span>Indent</span>
+                                            </button>
+                                            <div className="w-px h-5 bg-gray-200 dark:bg-[#333]"></div>
+                                            <button onClick={() => editor.chain().focus().liftListItem('listItem').run()} disabled={!editor.can().liftListItem('listItem')} className="flex-1 flex items-center justify-center space-x-1.5 px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg disabled:opacity-25 disabled:cursor-not-allowed transition-colors font-medium">
+                                                <Outdent className="w-4 h-4" /> <span>Outdent</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    {/* Advanced */}
+                                    <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1">Advanced</div>
+                                        {[
+                                            { fn: () => editor.chain().focus().toggleSuperscript().run(), icon: SuperscriptIcon, label: 'Superscript', active: editor.isActive('superscript') },
+                                            { fn: () => editor.chain().focus().toggleSubscript().run(), icon: SubscriptIcon, label: 'Subscript', active: editor.isActive('subscript') },
+                                        ].map((item, i) => (
+                                            <button key={i} onClick={item.fn} className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors ${item.active ? 'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'}`}>
+                                                <item.icon className="w-4 h-4" />
+                                                <span className="font-medium">{item.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Utilities */}
+                                    <div className="px-2 py-1.5">
+                                        <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1">Tools</div>
+                                        <button onClick={() => { navigator.clipboard.writeText(editor.getText()); setIsMoreOpen(false); }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
+                                            <FilePlus className="w-4 h-4" />
+                                            <span className="font-medium">Copy all text</span>
                                         </button>
-                                        <div className="w-px h-4 bg-gray-300 dark:bg-[#333] mx-1"></div>
-                                        <button onClick={() => editor.chain().focus().liftListItem('listItem').run()} disabled={!editor.can().liftListItem('listItem')} className="flex-1 text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center justify-center space-x-2 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
-                                            <Outdent className="w-4 h-4" /> <span>Outdent</span>
+                                        <button onClick={() => { printNote(); setIsMoreOpen(false); }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
+                                            <ArrowUpRight className="w-4 h-4" />
+                                            <span className="font-medium">Print note</span>
+                                        </button>
+                                        <button onClick={() => { editor.chain().focus().clearNodes().run(); editor.chain().focus().unsetAllMarks().run(); setIsMoreOpen(false); }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
+                                            <Type className="w-4 h-4" />
+                                            <span className="font-medium">Simplify formatting</span>
+                                        </button>
+                                        <button onClick={() => { editor.chain().focus().unsetAllMarks().run(); setIsMoreOpen(false); }} className="w-full text-left px-3 py-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 hover:text-red-600 dark:hover:text-red-400 transition-colors">
+                                            <X className="w-4 h-4" />
+                                            <span className="font-medium">Remove all formatting</span>
                                         </button>
                                     </div>
-                                </div>
-
-                                {/* Advanced Formatting */}
-                                <div className="px-2 py-2 border-b border-gray-200 dark:border-[#333]">
-                                    <div className="text-[10px] font-bold text-gray-500 mb-1 uppercase tracking-wider px-3 pt-1">Advanced</div>
-                                    <button onClick={() => editor.chain().focus().toggleSuperscript().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('superscript') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <SuperscriptIcon className="w-4 h-4" /> <span className="font-medium">Superscript</span>
-                                    </button>
-                                    <button onClick={() => editor.chain().focus().toggleSubscript().run()} className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors ${editor.isActive('subscript') ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-[#2d2d2d]/50' : 'text-gray-700 dark:text-gray-300'}`}>
-                                        <SubscriptIcon className="w-4 h-4" /> <span className="font-medium">Subscript</span>
-                                    </button>
-                                </div>
-
-                                {/* Formatting Utilities */}
-                                <div className="px-2 py-2">
-                                    <button onClick={() => { editor.chain().focus().clearNodes().run(); editor.chain().focus().unsetAllMarks().run(); }} className="w-full text-left px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
-                                        <Type className="w-4 h-4" /> <span>Simplify formatting</span>
-                                    </button>
-                                    <button onClick={() => editor.chain().focus().unsetAllMarks().run()} className="w-full text-left px-3 py-2 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 hover:text-gray-900 dark:hover:text-gray-200 transition-colors">
-                                        <X className="w-4 h-4" /> <span>Remove formatting</span>
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                                </div>,
+                                document.body
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+            <PrintPreviewModal
+                isOpen={isPrintPreviewOpen}
+                onClose={() => setIsPrintPreviewOpen(false)}
+                html={editor ? editor.getHTML() : ""}
+                title={noteTitle || "Untitled Note"}
+            />
+        </>
     );
 };
 
@@ -1032,7 +1498,7 @@ const TableBubbleMenuContent = ({ editor }) => {
         </div>
     );
 };
-const RichTextEditor = ({ content, onChange, editable = true, template = 'blank', onTemplateChange, isZenMode, onToggleZenMode, isSaving }) => {
+const RichTextEditor = ({ content, onChange, editable = true, template = 'blank', onTemplateChange, isZenMode, onToggleZenMode, isSaving, noteTitle }) => {
     const [currentTemplate, setCurrentTemplate] = useState(template);
 
     useEffect(() => {
@@ -1168,7 +1634,7 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
 
     return (
         <div className="flex flex-col h-full bg-white dark:bg-[#191919]">
-            {editable && <MenuBar editor={editor} onTemplateChange={handleTemplateChange} currentTemplate={currentTemplate} isZenMode={isZenMode} onToggleZenMode={onToggleZenMode} />}
+            {editable && <MenuBar editor={editor} onTemplateChange={handleTemplateChange} currentTemplate={currentTemplate} isZenMode={isZenMode} onToggleZenMode={onToggleZenMode} noteTitle={noteTitle} />}
             {editable && (
                 <BubbleMenu
                     editor={editor}
@@ -1189,7 +1655,7 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
                     <TextBubbleMenuContent editor={editor} />
                 </BubbleMenu>
             )}
-            <div className={`flex-1 overflow-y-auto custom-scrollbar template-container ${!isCustomTemplate ? `template-${currentTemplate}` : ''} bg-gray-50 dark:bg-[#0d0d0d]`}>
+            <div className={`flex-1 overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-[#0d0d0d]`}>
                 {/* Editor page with shadow effect */}
                 <div className="min-h-full flex justify-center pt-8 pb-32 px-4">
                     <div
@@ -1202,7 +1668,7 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
                         } : {}}
                     >
                         {/* Comfortable padding for writing */}
-                        <div className="px-12 py-8 pb-24 min-h-[1050px]">
+                        <div className={`px-12 py-8 pb-24 min-h-[1050px] template-container ${!isCustomTemplate ? `template-${currentTemplate}` : ''}`}>
                             <EditorContent editor={editor} />
                         </div>
 

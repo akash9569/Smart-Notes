@@ -16,7 +16,7 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuth = async () => {
         try {
-            const token = localStorage.getItem('accessToken');
+            const token = sessionStorage.getItem('accessToken');
             if (token) {
                 const response = await authAPI.getMe();
                 setUser(response.data.data.user);
@@ -31,8 +31,8 @@ export const AuthProvider = ({ children }) => {
 
             // Check if it's an Authentication Error (401)
             if (error.response && error.response.status === 401) {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
+                sessionStorage.removeItem('accessToken');
+                sessionStorage.removeItem('refreshToken');
                 setUser(null);
                 // Redirect to login handled by ProtectedRoute
             } else {
@@ -77,8 +77,8 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await authAPI.login({ email, password });
             const { user, accessToken, refreshToken } = response.data.data;
-            localStorage.setItem('accessToken', accessToken);
-            localStorage.setItem('refreshToken', refreshToken);
+            sessionStorage.setItem('accessToken', accessToken);
+            sessionStorage.setItem('refreshToken', refreshToken);
             localStorage.setItem('cached_user', JSON.stringify(user));
             localStorage.removeItem('isOfflineMode'); // Ensure we clear offline mode on real login
             setUser(user);
@@ -104,8 +104,8 @@ export const AuthProvider = ({ children }) => {
     const signup = async (name, email, password) => {
         const response = await authAPI.signup({ name, email, password });
         const { user, accessToken, refreshToken } = response.data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
+        sessionStorage.setItem('accessToken', accessToken);
+        sessionStorage.setItem('refreshToken', refreshToken);
         localStorage.removeItem('isOfflineMode');
         setUser(user);
         return user;
@@ -124,8 +124,8 @@ export const AuthProvider = ({ children }) => {
     const resetPassword = async (email, otp, password) => {
         const response = await authAPI.resetPassword({ email, otp, password });
         const { user: updatedUser, accessToken, refreshToken } = response.data.data;
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
+        sessionStorage.setItem('accessToken', accessToken);
+        sessionStorage.setItem('refreshToken', refreshToken);
         localStorage.setItem('cached_user', JSON.stringify(updatedUser));
         localStorage.removeItem('isOfflineMode');
         setUser(updatedUser);
@@ -140,8 +140,8 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Logout failed:', error);
         } finally {
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
+            sessionStorage.removeItem('accessToken');
+            sessionStorage.removeItem('refreshToken');
             localStorage.removeItem('isOfflineMode');
             setUser(null);
         }
@@ -150,6 +150,7 @@ export const AuthProvider = ({ children }) => {
     const updateUser = (userData) => {
         setUser(userData);
     };
+
 
     // Auto-logout after 45 mins of inactivity
     useEffect(() => {

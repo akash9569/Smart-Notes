@@ -1,12 +1,12 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import ForgotPassword from './pages/ForgotPassword';
 import Dashboard from './pages/Dashboard';
 import Landing from './pages/Landing';
 import ContactUs from './pages/ContactUs';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import CookiePolicy from './pages/CookiePolicy';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { NotesProvider } from './context/NotesContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -27,7 +27,7 @@ const ProtectedRoute = ({ children }) => {
     if (location.pathname === '/' || location.pathname === '') {
       return <Landing />;
     }
-    return <Navigate to="/login" />;
+    return <Navigate to="/" />;
   }
 
   return children;
@@ -46,10 +46,10 @@ function App() {
                   <NotificationManager />
                   <Toaster position="bottom-right" />
                   <Routes>
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/contact" element={<ContactUs />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/terms" element={<TermsOfService />} />
+                    <Route path="/cookies" element={<CookiePolicy />} />
                     <Route
                       path="/*"
                       element={

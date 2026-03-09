@@ -1,272 +1,251 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { LogOut, User, Moon, Sun, Shield, Bell, Save, Camera } from 'lucide-react';
-import { authAPI } from '../api';
+import { Moon, Sun, Bell, Type, Clock, SortAsc, FileText, Palette, LayoutGrid, AlignLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
-import ImageGalleryModal from './ImageGalleryModal';
 
 const SettingsView = () => {
-    const { user, logout } = useAuth();
     const { isDark, toggleTheme } = useTheme();
-    const [isEditing, setIsEditing] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [showGalleryModal, setShowGalleryModal] = useState(false);
 
-    const [formData, setFormData] = useState({
-        name: '',
-        email: '',
-        phone: '',
-        dob: '',
-        gender: '',
-        profileImage: ''
-    });
+    // Persist preferences in sessionStorage for per-tab isolation
+    const [notifications, setNotifications] = useState(() => sessionStorage.getItem('pref_notifications') === 'true');
+    const [fontSize, setFontSize] = useState(() => sessionStorage.getItem('pref_fontSize') || 'medium');
+    const [autoSave, setAutoSave] = useState(() => sessionStorage.getItem('pref_autoSave') || '2');
+    const [defaultView, setDefaultView] = useState(() => sessionStorage.getItem('pref_defaultView') || 'list');
+    const [sortOrder, setSortOrder] = useState(() => sessionStorage.getItem('pref_sortOrder') || 'updated');
+    const [spellCheck, setSpellCheck] = useState(() => sessionStorage.getItem('pref_spellCheck') !== 'false');
 
-    useEffect(() => {
-        if (user) {
-            setFormData({
-                name: user.name || '',
-                email: user.email || '',
-                phone: user.phone || '',
-                dob: user.dob ? new Date(user.dob).toISOString().split('T')[0] : '',
-                gender: user.gender || '',
-                profileImage: user.profileImage || ''
-            });
-        }
-    }, [user]);
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const updatePref = (key, value, setter) => {
+        sessionStorage.setItem(`pref_${key}`, value.toString());
+        setter(value);
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            await authAPI.updateDetails(formData);
-            toast.success('Profile updated successfully');
-            setIsEditing(false);
-            // Ideally, update user context here, but a refresh will also work
-            // Or trigger a re-fetch of 'me'
-            window.location.reload();
-        } catch (error) {
-            console.error('Update failed:', error);
-            toast.error(error.response?.data?.message || 'Failed to update profile');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleLogout = () => {
-        logout();
-    };
+    const Toggle = ({ enabled, onToggle }) => (
+        <button
+            onClick={onToggle}
+            className={`relative w-11 h-6 rounded-full transition-all duration-300 ${enabled
+                ? 'bg-indigo-500 shadow-lg shadow-indigo-500/30'
+                : 'bg-gray-300 dark:bg-[#444]'
+                }`}
+        >
+            <div className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-md transition-all duration-300 ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+        </button>
+    );
 
     return (
-        <div className="flex-1 bg-white dark:bg-[#1a1a1a] p-4 sm:p-8 overflow-y-auto">
-            <div className="max-w-2xl mx-auto">
-                <div className="flex items-center justify-between mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Settings</h1>
-                    {!isEditing && (
-                        <button
-                            onClick={() => setIsEditing(true)}
-                            className="text-blue-600 hover:text-blue-700 font-medium"
-                        >
-                            Edit Profile
-                        </button>
-                    )}
-                </div>
+        <div className="flex-1 bg-gray-50 dark:bg-[#141414] overflow-y-auto custom-scrollbar">
+            {/* Header */}
+            <div className="relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 opacity-95" />
+                <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djItSDI0di0yaDEyem0wLTRWMjhIMjR2Mmgxem0wLTR2LTJINDI0djJoMTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
 
-                {/* Profile Section */}
-                <form onSubmit={handleSubmit} className="bg-gray-50 dark:bg-[#2d2d2d] rounded-xl border border-gray-200 dark:border-gray-700 p-4 sm:p-6 mb-8">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
-                        <User className="w-5 h-5 mr-2" />
-                        Profile Details
-                    </h2>
-
-                    <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 mb-8 text-center sm:text-left">
-                        <div className="relative group">
-                            <div className="w-20 h-20 rounded-full bg-blue-600 flex items-center justify-center text-white text-3xl font-bold overflow-hidden">
-                                {formData.profileImage ? (
-                                    <img src={formData.profileImage} alt="Profile" className="w-full h-full object-cover" />
-                                ) : (
-                                    formData.name?.charAt(0) || 'U'
-                                )}
+                <div className="relative px-4 sm:px-8 py-8">
+                    <div className="max-w-6xl mx-auto">
+                        <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-tight flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm border border-white/10">
+                                <FileText className="w-5 h-5 text-white" />
                             </div>
-                            {isEditing && (
-                                <div
-                                    onClick={() => setShowGalleryModal(true)}
-                                    className="absolute inset-0 bg-black bg-opacity-40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                                >
-                                    <Camera className="w-6 h-6 text-white" />
-                                </div>
-                            )}
-                        </div>
-                        <div>
-                            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{formData.name || 'User Name'}</h3>
-                            <p className="text-gray-500 dark:text-gray-400">{formData.email}</p>
-                        </div>
+                            Settings
+                        </h1>
+                        <p className="text-white/60 text-sm mt-2 ml-[52px]">Customize your notes experience</p>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Full Name</label>
-                            <input
-                                type="text"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                className="w-full px-3 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email</label>
-                            <input
-                                type="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                className="w-full px-3 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Phone Number</label>
-                            <input
-                                type="tel"
-                                name="phone"
-                                value={formData.phone}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                placeholder="+1 (555) 000-0000"
-                                className="w-full px-3 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Birth</label>
-                            <input
-                                type="date"
-                                name="dob"
-                                value={formData.dob}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                className="w-full px-3 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed dark:text-white"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Gender</label>
-                            <select
-                                name="gender"
-                                value={formData.gender}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                className="w-full px-3 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed dark:text-white"
-                            >
-                                <option value="">Select Gender</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                                <option value="Other">Other</option>
-                            </select>
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profile Image URL</label>
-                            <input
-                                type="url"
-                                name="profileImage"
-                                value={formData.profileImage}
-                                onChange={handleChange}
-                                disabled={!isEditing}
-                                placeholder="https://example.com/avatar.jpg"
-                                className="w-full px-3 py-2 bg-white dark:bg-[#1a1a1a] border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:opacity-60 disabled:cursor-not-allowed dark:text-white"
-                            />
-                        </div>
-                    </div>
-
-                    {isEditing && (
-                        <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-                            <button
-                                type="button"
-                                onClick={() => setIsEditing(false)}
-                                className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
-                            >
-                                {loading ? 'Saving...' : (
-                                    <>
-                                        <Save className="w-4 h-4 mr-2" />
-                                        Save Changes
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    )}
-                </form>
-
-                {/* Preferences Section */}
-                <div className="bg-gray-50 dark:bg-[#2d2d2d] rounded-xl border border-gray-200 dark:border-gray-700 p-6 mb-8">
-                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-                        <Shield className="w-5 h-5 mr-2" />
-                        Preferences
-                    </h2>
-                    <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                                {isDark ? (
-                                    <>
-                                        <Moon className="w-5 h-5 text-gray-500" />
-                                        <span className="text-gray-700 dark:text-gray-300">Dark Mode</span>
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sun className="w-5 h-5 text-gray-500" />
-                                        <span className="text-gray-700 dark:text-gray-300">Light Mode</span>
-                                    </>
-                                )}
-                            </div>
-                            <button
-                                onClick={toggleTheme}
-                                className={`w-12 h-6 rounded-full p-1 transition-colors ${isDark ? 'bg-blue-600' : 'bg-gray-300'}`}
-                            >
-                                <div className={`w-4 h-4 rounded-full bg-white transform transition-transform ${isDark ? 'translate-x-6' : ''}`} />
-                            </button>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                                <Bell className="w-5 h-5 text-gray-500" />
-                                <span className="text-gray-700 dark:text-gray-300">Notifications</span>
-                            </div>
-                            <button className="w-12 h-6 rounded-full p-1 bg-gray-300 transition-colors">
-                                <div className="w-4 h-4 rounded-full bg-white" />
-                            </button>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Logout Section */}
-                <div className="border-t border-gray-200 dark:border-gray-800 pt-8">
-                    <button
-                        onClick={handleLogout}
-                        className="w-full bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 py-3 rounded-lg font-medium hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors flex items-center justify-center"
-                    >
-                        <LogOut className="w-5 h-5 mr-2" />
-                        Log Out
-                    </button>
                 </div>
             </div>
 
-            <ImageGalleryModal
-                isOpen={showGalleryModal}
-                onClose={() => setShowGalleryModal(false)}
-                onSelect={(url) => {
-                    setFormData({ ...formData, profileImage: url });
-                    setShowGalleryModal(false);
-                }}
-            />
+            <div className="max-w-6xl mx-auto px-4 sm:px-8 py-6 space-y-5">
+
+                {/* Appearance */}
+                <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-200 dark:border-[#333] shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-[#2a2a2a]">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Palette className="w-4 h-4 text-indigo-500" />
+                            Appearance
+                        </h3>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-[#2a2a2a]">
+                        {/* Theme Toggle */}
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-center">
+                                    {isDark ? <Moon className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">{isDark ? 'Dark Mode' : 'Light Mode'}</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Switch between dark and light theme</div>
+                                </div>
+                            </div>
+                            <Toggle enabled={isDark} onToggle={() => { toggleTheme(); toast.success(isDark ? 'Switched to Light Mode' : 'Switched to Dark Mode', { icon: isDark ? '☀️' : '🌙' }); }} />
+                        </div>
+
+                        {/* Font Size */}
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center">
+                                    <Type className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Font Size</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Default font size for notes editor</div>
+                                </div>
+                            </div>
+                            <select
+                                value={fontSize}
+                                onChange={(e) => { updatePref('fontSize', e.target.value, setFontSize); toast.success(`Font size: ${e.target.value}`, { icon: '🔤' }); }}
+                                className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
+                            >
+                                <option value="small">Small</option>
+                                <option value="medium">Medium</option>
+                                <option value="large">Large</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Editor Preferences */}
+                <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-200 dark:border-[#333] shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-[#2a2a2a]">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <AlignLeft className="w-4 h-4 text-indigo-500" />
+                            Editor
+                        </h3>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-[#2a2a2a]">
+                        {/* Auto-save */}
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                                    <Clock className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Auto-save Interval</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">How often notes are auto-saved</div>
+                                </div>
+                            </div>
+                            <select
+                                value={autoSave}
+                                onChange={(e) => { updatePref('autoSave', e.target.value, setAutoSave); toast.success(`Auto-save: ${e.target.value}s`, { icon: '💾' }); }}
+                                className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
+                            >
+                                <option value="1">1 second</option>
+                                <option value="2">2 seconds</option>
+                                <option value="5">5 seconds</option>
+                                <option value="10">10 seconds</option>
+                            </select>
+                        </div>
+
+                        {/* Spell Check */}
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center">
+                                    <Type className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Spell Check</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Check spelling while typing</div>
+                                </div>
+                            </div>
+                            <Toggle enabled={spellCheck} onToggle={() => { const val = !spellCheck; updatePref('spellCheck', val, setSpellCheck); toast.success(val ? 'Spell check enabled' : 'Spell check disabled', { icon: '✏️' }); }} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Notes Organization */}
+                <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-200 dark:border-[#333] shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-[#2a2a2a]">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <LayoutGrid className="w-4 h-4 text-indigo-500" />
+                            Organization
+                        </h3>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-[#2a2a2a]">
+                        {/* Default View */}
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-orange-50 dark:bg-orange-900/20 flex items-center justify-center">
+                                    <LayoutGrid className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Default View</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">How notes are displayed by default</div>
+                                </div>
+                            </div>
+                            <select
+                                value={defaultView}
+                                onChange={(e) => { updatePref('defaultView', e.target.value, setDefaultView); toast.success(`Default view: ${e.target.value}`, { icon: '📋' }); }}
+                                className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
+                            >
+                                <option value="list">List View</option>
+                                <option value="grid">Grid View</option>
+                                <option value="compact">Compact View</option>
+                            </select>
+                        </div>
+
+                        {/* Sort Order */}
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-teal-50 dark:bg-teal-900/20 flex items-center justify-center">
+                                    <SortAsc className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Sort Notes By</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Default ordering of your notes</div>
+                                </div>
+                            </div>
+                            <select
+                                value={sortOrder}
+                                onChange={(e) => { updatePref('sortOrder', e.target.value, setSortOrder); toast.success(`Sort by: ${e.target.value}`, { icon: '🔃' }); }}
+                                className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
+                            >
+                                <option value="updated">Last Updated</option>
+                                <option value="created">Date Created</option>
+                                <option value="title">Title (A-Z)</option>
+                                <option value="title-desc">Title (Z-A)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Notifications */}
+                <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-200 dark:border-[#333] shadow-sm overflow-hidden">
+                    <div className="px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-[#2a2a2a]">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Bell className="w-4 h-4 text-indigo-500" />
+                            Notifications
+                        </h3>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-[#2a2a2a]">
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-pink-50 dark:bg-pink-900/20 flex items-center justify-center">
+                                    <Bell className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Push Notifications</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Get notified about shared notes and reminders</div>
+                                </div>
+                            </div>
+                            <Toggle
+                                enabled={notifications}
+                                onToggle={() => {
+                                    const newVal = !notifications;
+                                    if (newVal && 'Notification' in window) {
+                                        Notification.requestPermission().then(perm => {
+                                            if (perm === 'granted') {
+                                                updatePref('notifications', true, setNotifications);
+                                                toast.success('Notifications enabled!', { icon: '🔔' });
+                                            } else {
+                                                toast.error('Browser blocked notifications. Please enable in browser settings.', { icon: '🔕' });
+                                            }
+                                        });
+                                    } else {
+                                        updatePref('notifications', newVal, setNotifications);
+                                        toast.success(newVal ? 'Notifications on' : 'Notifications off', { icon: newVal ? '🔔' : '🔕' });
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

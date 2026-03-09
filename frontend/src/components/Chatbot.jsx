@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Minimize2, Maximize2, Sparkles, Bot, User, Loader2, ToggleLeft, ToggleRight } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { aiAPI } from '../api';
 
 const Chatbot = () => {
@@ -10,7 +11,6 @@ const Chatbot = () => {
     ]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const [isDemoMode, setIsDemoMode] = useState(true);
     const messagesEndRef = useRef(null);
 
     const scrollToBottom = () => {
@@ -33,45 +33,35 @@ const Chatbot = () => {
         try {
             let aiResponseText = '';
 
-            if (isDemoMode) {
-                // Simulate network delay
-                await new Promise(resolve => setTimeout(resolve, 1500));
+            // Real API call
+            const response = await aiAPI.processContent({
+                type: 'chat',
+                content: userMessage.content,
+                context: messages // Pass history for context
+            });
 
-                // Friendly demo responses
-                const lowerInput = userMessage.content.toLowerCase();
-                if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
-                    aiResponseText = "Hello! It's great to see you. Ready to get productive? 🚀";
-                } else if (lowerInput.includes('help')) {
-                    aiResponseText = "I'd love to help! You can ask me to summarize notes, fix spelling, or just brainstorm ideas. What's on your mind?";
-                } else if (lowerInput.includes('name')) {
-                    aiResponseText = "I'm your friendly Smart Notes Assistant! I don't have a personal name, but you can call me whatever you like. 😊";
-                } else {
-                    aiResponseText = "That's interesting! In this demo mode, I can simulate a conversation. In the real version, I'll use advanced AI to give you detailed answers. Try asking me to help with your notes!";
-                }
+            if (response.data.success) {
+                aiResponseText = response.data.result;
             } else {
-                // Real API call
-                const response = await aiAPI.processContent({
-                    type: 'chat',
-                    content: userMessage.content,
-                    context: messages // Pass history for context
-                });
-
-                if (response.data.success) {
-                    aiResponseText = response.data.result;
-                } else {
-                    aiResponseText = "I'm having a little trouble connecting right now. Please try again later.";
-                }
+                aiResponseText = "I'm having a little trouble connecting right now. Please try again later.";
             }
 
             setMessages(prev => [...prev, { role: 'assistant', content: aiResponseText }]);
 
         } catch (error) {
             console.error('Chatbot Error:', error);
-            let errorMessage = "Oops! Something went wrong.";
-            if (error.response?.data?.error?.code === 'insufficient_quota' || error.response?.data?.error?.code === 'invalid_api_key' || !error.response) {
-                setIsDemoMode(true);
-                errorMessage = "I've switched to Demo Mode so we can keep chatting! (No API credits/key found)";
+            let errorMessage = "Oops! I encountered an error. Please try again later.";
+
+            // If backend returned a specific error message
+            if (error.response && error.response.data) {
+                const backendErrorMsg = error.response.data.error || error.response.data.message;
+                if (backendErrorMsg) {
+                    errorMessage = backendErrorMsg;
+                }
+            } else if (!error.response) {
+                errorMessage = "Network error! Please check your connection.";
             }
+
             setMessages(prev => [...prev, { role: 'assistant', content: errorMessage, isError: true }]);
         } finally {
             setIsLoading(false);
@@ -107,16 +97,6 @@ const Chatbot = () => {
                     <span className="font-medium">AI Assistant</span>
                 </div>
                 <div className="flex items-center space-x-2">
-                    {!isMinimized && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); setIsDemoMode(!isDemoMode); }}
-                            className="flex items-center space-x-1 px-2 py-0.5 rounded-full bg-white/20 hover:bg-white/30 transition-colors text-white text-[10px] font-medium uppercase tracking-wider"
-                            title="Toggle Demo Mode"
-                        >
-                            <span>Demo</span>
-                            {isDemoMode ? <ToggleRight className="w-3 h-3" /> : <ToggleLeft className="w-3 h-3" />}
-                        </button>
-                    )}
                     <button
                         onClick={(e) => { e.stopPropagation(); setIsMinimized(!isMinimized); }}
                         className="p-1 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -149,7 +129,23 @@ const Chatbot = () => {
                                             : 'bg-white dark:bg-[#2d2d2d] text-gray-800 dark:text-gray-200 border border-gray-100 dark:border-[#444] rounded-bl-none'
                                         }`}
                                 >
-                                    {msg.content}
+                                    {msg.role === 'user' ? (
+                                        msg.content
+                                    ) : (
+                                        <div className="prose prose-sm dark:prose-invert max-w-none text-[15px] leading-relaxed break-words">
+                                            <ReactMarkdown
+                                                components={{
+                                                    p: ({ node, ...props }) => <p className="mb-2 last:mb-0" {...props} />,
+                                                    ul: ({ node, ...props }) => <ul className="list-disc pl-5 mb-2 space-y-1" {...props} />,
+                                                    ol: ({ node, ...props }) => <ol className="list-decimal pl-5 mb-2 space-y-1" {...props} />,
+                                                    li: ({ node, ...props }) => <li className="marker:text-blue-500" {...props} />,
+                                                    strong: ({ node, ...props }) => <strong className="font-semibold text-gray-900 dark:text-gray-100" {...props} />
+                                                }}
+                                            >
+                                                {msg.content}
+                                            </ReactMarkdown>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         ))}
@@ -182,11 +178,6 @@ const Chatbot = () => {
                                 <Send className="w-4 h-4" />
                             </button>
                         </form>
-                        {isDemoMode && (
-                            <div className="text-[10px] text-center text-green-600 dark:text-green-400 mt-2 font-medium">
-                                Demo Mode Active • Simulated Responses
-                            </div>
-                        )}
                     </div>
                 </>
             )}

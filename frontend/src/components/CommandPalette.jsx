@@ -41,7 +41,7 @@ export const CommandPalette = () => {
     const { logout } = useAuth();
     const { theme, toggleTheme } = useTheme();
 
-    // Toggle with Cmd+K
+    // Toggle with Cmd+K or custom event
     useEffect(() => {
         const down = (e) => {
             if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
@@ -49,8 +49,14 @@ export const CommandPalette = () => {
                 setOpen((open) => !open);
             }
         };
+        const openEvent = () => setOpen(true);
+
         document.addEventListener('keydown', down);
-        return () => document.removeEventListener('keydown', down);
+        document.addEventListener('open-command-palette', openEvent);
+        return () => {
+            document.removeEventListener('keydown', down);
+            document.removeEventListener('open-command-palette', openEvent);
+        };
     }, []);
 
     const runCommand = (command) => {

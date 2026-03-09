@@ -215,6 +215,7 @@ const JournalEntry = ({ note, onUpdate, isSaving }) => {
                                 isSaving={isSaving}
                                 placeholder="Write your thoughts freely..."
                                 isZenMode={false}
+                                template={note.template || 'blank'}
                             />
                         </div>
                     </section>

@@ -6,18 +6,23 @@ export const useTheme = () => useContext(ThemeContext);
 
 export const ThemeProvider = ({ children }) => {
     const [isDark, setIsDark] = useState(() => {
-        const saved = localStorage.getItem('theme');
-        return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        // Use sessionStorage for per-tab theme isolation
+        const saved = sessionStorage.getItem('theme');
+        if (saved) return saved === 'dark';
+        // Fallback: check if localStorage has a preference (from before), then system
+        const global = localStorage.getItem('theme');
+        if (global) return global === 'dark';
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
 
     useEffect(() => {
         const root = window.document.documentElement;
         if (isDark) {
             root.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
+            sessionStorage.setItem('theme', 'dark');
         } else {
             root.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
+            sessionStorage.setItem('theme', 'light');
         }
     }, [isDark]);
 

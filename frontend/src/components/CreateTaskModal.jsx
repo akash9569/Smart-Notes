@@ -340,10 +340,10 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, onUpdate, taskToEdit, isEv
                                                 type="button"
                                                 onClick={() => setPriority(p)}
                                                 className={`px-3 py-1.5 rounded-md text-sm font-medium capitalize transition-all ${priority === p
-                                                        ? p === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                                            : p === 'medium' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
-                                                                : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                                        : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#333]'
+                                                    ? p === 'high' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                                                        : p === 'medium' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                                                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                                    : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#333]'
                                                     }`}
                                             >
                                                 {p}
@@ -383,6 +383,7 @@ const CreateTaskModal = ({ isOpen, onClose, onCreate, onUpdate, taskToEdit, isEv
                                         <option value="event">Events</option>
                                         <option value="personal">Personal</option>
                                         <option value="work">Work</option>
+                                        <option value="learning">Learning</option>
                                         <option value="class">Class</option>
                                     </select>
                                 </div>
