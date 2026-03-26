@@ -5,11 +5,17 @@ export default defineConfig({
     plugins: [react()],
 
     resolve: {
-        dedupe: ['react', 'react-dom'], // ✅ IMPORTANT
+        dedupe: ['react', 'react-dom'],
     },
 
     optimizeDeps: {
-        include: ['react-router-dom'], // ✅ FORCE RESOLVE
+        include: ['react-router-dom'],
+    },
+
+    build: {
+        commonjsOptions: {
+            include: [/node_modules/],
+        },
     },
 
     server: {
