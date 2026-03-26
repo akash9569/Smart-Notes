@@ -19,6 +19,7 @@ import { CommandPalette } from './components/CommandPalette';
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();
+  const location = useLocation(); // ✅ ADD THIS
 
   if (loading) {
     return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
