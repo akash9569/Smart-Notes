@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { useEditor, EditorContent, BubbleMenu, ReactNodeViewRenderer } from '@tiptap/react';
+import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/extension-bubble-menu';
 import TaskItemNode from './TaskItemNode';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -9,9 +10,10 @@ import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
 import Link from '@tiptap/extension-link';
 import Image from '@tiptap/extension-image';
-import Table from '@tiptap/extension-table';
-import TableRow from '@tiptap/extension-table-row';
-import TableCell from '@tiptap/extension-table-cell';
+import { Table } from '@tiptap/extension-table';
+import { TableRow } from '@tiptap/extension-table-row';
+import { TableCell } from '@tiptap/extension-table-cell';
+import { TableHeader } from '@tiptap/extension-table-header';
 import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import CharacterCount from '@tiptap/extension-character-count';
 import { useSettings } from '../context/SettingsContext';
@@ -104,15 +106,17 @@ const CustomTableHeader = TableHeader.extend({
         };
     },
 });
-import TableHeader from '@tiptap/extension-table-header';
+// import TableHeader from '@tiptap/extension-table-header';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
-import TextStyle from '@tiptap/extension-text-style';
-import Color from '@tiptap/extension-color';
-import Highlight from '@tiptap/extension-highlight';
+import { TextStyle } from '@tiptap/extension-text-style';
+import { Color } from '@tiptap/extension-color';
+import { Highlight } from '@tiptap/extension-highlight';
+// import Subscript from '@tiptap/extension-subscript';
+// import Superscript from '@tiptap/extension-superscript';
+// import TableOfContents from '@tiptap/extension-table-of-contents';
 import Subscript from '@tiptap/extension-subscript';
 import Superscript from '@tiptap/extension-superscript';
-import TableOfContents from '@tiptap/extension-table-of-contents';
 import BubbleMenuExtension from '@tiptap/extension-bubble-menu';
 
 import FontFamily from '@tiptap/extension-font-family';
@@ -1089,7 +1093,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                                             title={c}
                                                         ></button>
                                                     ))}
-                                                    <div 
+                                                    <div
                                                         onMouseDown={(e) => {
                                                             // Store selection BEFORE the native color picker dialog opens and steals blur
                                                             window.__tiptapSelection = editor.state.selection;
@@ -1132,7 +1136,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                                             title={h.t}
                                                         ></button>
                                                     ))}
-                                                    <div 
+                                                    <div
                                                         onMouseDown={(e) => {
                                                             window.__tiptapSelection = editor.state.selection;
                                                         }}
@@ -1645,7 +1649,7 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
             Highlight.configure({ multicolor: true }),
             Subscript,
             Superscript,
-            TableOfContents,
+            // TableOfContents,
             Youtube.configure({
                 controls: false,
             }),

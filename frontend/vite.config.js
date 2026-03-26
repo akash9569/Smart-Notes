@@ -13,6 +13,22 @@ export default defineConfig({
     },
 
     build: {
+        chunkSizeWarningLimit: 1000, // avoid unnecessary warnings
+
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    react: ['react', 'react-dom'],
+                    router: ['react-router-dom'],
+                    tiptap: [
+                        '@tiptap/core',
+                        '@tiptap/react',
+                        '@tiptap/starter-kit'
+                    ],
+                },
+            },
+        },
+
         commonjsOptions: {
             include: [/node_modules/],
         },
