@@ -5,10 +5,11 @@ export default defineConfig({
     plugins: [react()],
 
     resolve: {
-        alias: {
-            // 🔥 Fix for react-router resolution issue (important)
-            'react-router': 'react-router-dom',
-        },
+        dedupe: ['react', 'react-dom'], // ✅ IMPORTANT
+    },
+
+    optimizeDeps: {
+        include: ['react-router-dom'], // ✅ FORCE RESOLVE
     },
 
     server: {
