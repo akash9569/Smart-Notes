@@ -121,9 +121,9 @@ const JournalEntry = ({ note, onUpdate, isSaving }) => {
                                         <button
                                             key={m.value}
                                             onClick={() => handleUpdate('mood', m.value)}
-                                            className={`group flex flex-col items-center p-3 rounded-xl transition-all duration-200 ${mood === m.value
-                                                ? `${m.color} ring-2 ring-offset-2 ring-blue-500 dark:ring-offset-[#1e1e1e] scale-105`
-                                                : 'hover:bg-gray-50 dark:hover:bg-[#2d2d2d] grayscale hover:grayscale-0 opacity-70 hover:opacity-100'
+                                            className={`group flex flex-col items-center p-3 rounded-2xl transition-all duration-300 ${mood === m.value
+                                                ? `${m.color} ring-2 ring-offset-2 ring-blue-500/50 dark:ring-offset-[#1e1e1e] scale-[1.05] shadow-sm`
+                                                : 'hover:bg-gray-50/80 dark:hover:bg-[#282828] grayscale hover:grayscale-0 opacity-60 hover:opacity-100'
                                                 }`}
                                         >
                                             <span className="text-3xl mb-1 transform group-hover:scale-110 transition-transform duration-200">{m.emoji}</span>
@@ -144,7 +144,7 @@ const JournalEntry = ({ note, onUpdate, isSaving }) => {
                                     value={intention}
                                     onChange={(e) => handleUpdate('intention', e.target.value)}
                                     placeholder="What is your main focus or mindset for today?"
-                                    className="w-full bg-transparent border-b border-gray-200 dark:border-gray-700 py-2 text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:border-purple-500 transition-colors"
+                                    className="w-full bg-gray-50 dark:bg-[#252525] rounded-xl px-4 py-3 border border-gray-100 dark:border-[#333] text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 dark:focus:ring-purple-500/30 transition-all font-medium"
                                 />
                             </div>
                         </div>
@@ -173,7 +173,7 @@ const JournalEntry = ({ note, onUpdate, isSaving }) => {
                                         value={item.text}
                                         onChange={(e) => handleGratitudeChange(index, e.target.value)}
                                         placeholder={`I am grateful for...`}
-                                        className="w-full bg-transparent border-none py-1 text-gray-700 dark:text-gray-300 placeholder-gray-300 dark:placeholder-gray-600 focus:outline-none focus:ring-0"
+                                        className="w-full bg-gray-50 dark:bg-[#252525] px-4 py-2.5 rounded-xl border border-gray-100 dark:border-[#333] text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-400/20 dark:focus:ring-red-500/30 transition-all"
                                     />
                                 </div>
                             ))}
@@ -197,18 +197,20 @@ const JournalEntry = ({ note, onUpdate, isSaving }) => {
                             value={dailyHighlight}
                             onChange={(e) => handleUpdate('dailyHighlight', e.target.value)}
                             placeholder="What was the best part of your day?"
-                            className="w-full bg-yellow-50/50 dark:bg-yellow-900/10 rounded-xl p-4 border-none text-gray-800 dark:text-gray-200 placeholder-gray-400 focus:ring-2 focus:ring-yellow-400/50 resize-none"
+                            className="w-full bg-yellow-50 dark:bg-[#2a261c] rounded-xl p-4 border border-yellow-100 dark:border-[#3d3322] text-gray-800 dark:text-gray-200 placeholder-gray-500 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 dark:focus:ring-yellow-500/30 transition-all resize-none font-medium"
                             rows={3}
                         />
                     </section>
 
                     {/* Deep Reflection - Rich Text */}
-                    <section className="bg-white dark:bg-[#1e1e1e] p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] min-h-[500px] flex flex-col mb-12">
-                        <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 mb-4 flex items-center gap-2">
-                            <PenLine className="w-6 h-6 text-indigo-400" />
-                            Daily Reflection
-                        </h3>
-                        <div className="flex-1 -mx-8 -mb-8">
+                    <section className="bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-sm border border-gray-100 dark:border-[#2a2a2a] min-h-[500px] flex flex-col mb-12 overflow-hidden">
+                        <div className="p-6 sm:p-8 border-b border-gray-100 dark:border-[#2a2a2a] bg-gray-50/50 dark:bg-[#1a1a1a]/50">
+                            <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-2">
+                                <PenLine className="w-6 h-6 text-indigo-400" />
+                                Daily Reflection
+                            </h3>
+                        </div>
+                        <div className="flex-1 bg-white dark:bg-[#1e1e1e]">
                             <RichTextEditor
                                 content={note.content}
                                 onChange={(newContent) => onUpdate({ content: newContent })}

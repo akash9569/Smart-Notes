@@ -112,7 +112,7 @@ const getEmailTemplate = (userName, taskTitle, dueDate, description) => {
             </div>
 
             <div class="button-container">
-                <a href="http://localhost:5173" class="button">View Task in App</a>
+                <a href="http://localhost:5175" class="button">View Task in App</a>
             </div>
         </div>
         <div class="footer">

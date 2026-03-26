@@ -199,13 +199,13 @@ const getWelcomeTemplate = (name) => {
             </div>
             
             <div class="cta-wrapper">
-                <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/dashboard" class="cta-button">Go to your Dashboard</a>
+                <a href="${process.env.CLIENT_URL || 'http://localhost:5175'}/dashboard" class="cta-button">Go to your Dashboard</a>
             </div>
         </div>
         
         <div class="footer">
             <p>
-                Have questions? Check out our <a href="${process.env.CLIENT_URL || 'http://localhost:5173'}/contact">Support Options</a> or reply to this email.
+                Have questions? Check out our <a href="${process.env.CLIENT_URL || 'http://localhost:5175'}/contact">Support Options</a> or reply to this email.
             </p>
             <p>
                 &copy; ${new Date().getFullYear()} Smart Notes App. All rights reserved.<br>

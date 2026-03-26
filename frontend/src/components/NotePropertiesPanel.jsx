@@ -267,7 +267,7 @@ const NotePropertiesPanel = ({ note, onUpdate, onClose }) => {
     );
 
     return (
-        <div className="w-[320px] bg-white dark:bg-[#1a1a1a] border-l border-gray-200 dark:border-[#2a2a2a] flex flex-col h-full overflow-hidden text-gray-800 dark:text-[#e0e0e0] font-sans">
+        <div className="w-[320px] sm:w-[350px] absolute right-0 top-0 bottom-0 z-40 lg:relative lg:z-auto lg:h-full bg-white dark:bg-[#1a1a1a] border-l border-gray-200 dark:border-[#2a2a2a] flex flex-col overflow-hidden text-gray-800 dark:text-[#e0e0e0] font-sans shadow-2xl lg:shadow-none">
             {/* Header */}
             <div className="px-5 py-4 border-b border-gray-200 dark:border-[#2a2a2a] flex items-center justify-between shrink-0">
                 <h3 className="font-semibold text-[17px] text-gray-900 dark:text-white tracking-tight">Properties</h3>

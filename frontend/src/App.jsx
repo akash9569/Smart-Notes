@@ -13,6 +13,7 @@ import { ThemeProvider } from './context/ThemeContext';
 import { TasksProvider } from './context/TasksContext';
 import { HabitsProvider } from './context/HabitsContext';
 import { ExpensesProvider } from './context/ExpensesContext';
+import { SettingsProvider } from './context/SettingsContext';
 import NotificationManager from './components/NotificationManager';
 import { CommandPalette } from './components/CommandPalette';
 
@@ -42,23 +43,25 @@ function App() {
             <TasksProvider>
               <HabitsProvider>
                 <ExpensesProvider>
-                  <CommandPalette />
-                  <NotificationManager />
-                  <Toaster position="bottom-right" />
-                  <Routes>
-                    <Route path="/contact" element={<ContactUs />} />
-                    <Route path="/privacy" element={<PrivacyPolicy />} />
-                    <Route path="/terms" element={<TermsOfService />} />
-                    <Route path="/cookies" element={<CookiePolicy />} />
-                    <Route
-                      path="/*"
-                      element={
-                        <ProtectedRoute>
-                          <Dashboard />
-                        </ProtectedRoute>
-                      }
-                    />
-                  </Routes>
+                  <SettingsProvider>
+                    <CommandPalette />
+                    <NotificationManager />
+                    <Toaster position="bottom-right" />
+                    <Routes>
+                      <Route path="/contact" element={<ContactUs />} />
+                      <Route path="/privacy" element={<PrivacyPolicy />} />
+                      <Route path="/terms" element={<TermsOfService />} />
+                      <Route path="/cookies" element={<CookiePolicy />} />
+                      <Route
+                        path="/*"
+                        element={
+                          <ProtectedRoute>
+                            <Dashboard />
+                          </ProtectedRoute>
+                        }
+                      />
+                    </Routes>
+                  </SettingsProvider>
                 </ExpensesProvider>
               </HabitsProvider>
             </TasksProvider>

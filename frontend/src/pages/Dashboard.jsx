@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotes } from '../context/NotesContext';
+import { useSettings } from '../context/SettingsContext';
 import Sidebar from '../components/Sidebar';
 
 import NotesList from '../components/NotesList';
@@ -27,7 +28,7 @@ import JournalEntry from '../components/JournalEntry';
 import {
     Maximize2,
     MoreHorizontal,
-    Share,
+    Share2,
     Link,
     Star,
     Clock,
@@ -86,6 +87,7 @@ const Dashboard = () => {
         setActiveJournal,
         journals
     } = useNotes();
+    const { autoSaveInterval } = useSettings();
 
     const [activeView, setActiveView] = useState('home');
 
@@ -222,10 +224,10 @@ const Dashboard = () => {
                     setIsSaving(false);
                 }
             }
-        }, 2000);
+        }, parseInt(autoSaveInterval || 2) * 1000);
 
         return () => clearTimeout(timer);
-    }, [title, content, currentNote, updateNote]);
+    }, [title, content, currentNote, updateNote, autoSaveInterval]);
 
     const handleCreateNote = async (initialData = {}) => {
         try {
@@ -445,7 +447,7 @@ const Dashboard = () => {
                                 <>
                                     {/* Editor Toolbar / Header - Hidden in Zen Mode */}
                                     {!isZenMode && (
-                                        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-[#1a1a1a] no-print">
+                                        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-[#1a1a1a] no-print relative z-30">
                                             <div className="flex items-center space-x-3 text-gray-500 dark:text-gray-400 text-sm overflow-hidden">
                                                 {/* Mobile Back Button */}
                                                 <button
@@ -587,12 +589,12 @@ const Dashboard = () => {
                         </div>
 
                         {/* Right Pane: Editor or Empty State */}
-                        <div className={`${!currentNote ? 'hidden lg:flex' : 'flex'} flex-1 flex-col bg-white dark:bg-[#1a1a1a] h-full overflow-hidden relative w-full`}>
+                        <div className={`${!currentNote ? 'hidden lg:flex' : 'flex'} flex-1 flex-col bg-white dark:bg-[#111111] h-full overflow-hidden relative w-full`}>
                             {currentNote ? (
                                 <>
                                     {/* Editor Toolbar / Header - Hidden in Zen Mode */}
                                     {!isZenMode && (
-                                        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-[#1a1a1a] no-print">
+                                        <div className="px-5 py-2.5 border-b border-gray-200/50 dark:border-white/5 flex items-center justify-between bg-white/80 dark:bg-[#111111]/80 backdrop-blur-md no-print relative z-30 transition-colors duration-300">
                                             <div className="flex items-center space-x-3 text-gray-500 dark:text-gray-400 text-sm overflow-hidden">
                                                 {/* Mobile Back Button */}
                                                 <button
@@ -610,10 +612,8 @@ const Dashboard = () => {
                                                     <Maximize2 className="w-4 h-4 cursor-pointer hover:text-gray-700 dark:hover:text-gray-200" />
                                                 </button>
                                                 <div className="h-4 w-px bg-gray-300 dark:bg-gray-700 mx-1 hidden lg:block"></div>
-                                                <div className="flex items-center space-x-1 overflow-hidden">
-                                                    <span className="hover:underline cursor-pointer hidden sm:inline">First Notebook</span>
-                                                    <span className="text-gray-400 hidden sm:inline">›</span>
-                                                    <span className="text-gray-900 dark:text-white font-medium truncate max-w-[150px] sm:max-w-[200px]">{title || 'Untitled'}</span>
+                                                <div className="flex items-center space-x-1.5 overflow-hidden text-[13px]">
+                                                    <span className="text-gray-900 dark:text-gray-100 font-semibold truncate max-w-[150px] sm:max-w-[200px] tracking-wide">{title || 'Untitled'}</span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center space-x-1 sm:space-x-2 shrink-0">
@@ -671,14 +671,14 @@ const Dashboard = () => {
                                                 <div className="relative" ref={shareRef}>
                                                     <button
                                                         onClick={() => setIsShareOpen(!isShareOpen)}
-                                                        className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-200 ${isShareOpen
-                                                            ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-400'
-                                                            : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+                                                        className={`flex items-center space-x-1.5 px-3.5 py-1.5 rounded-lg transition-all duration-200 ${isShareOpen
+                                                            ? 'bg-blue-700 text-white shadow-inner'
+                                                            : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow'
                                                             }`}
                                                         title="Share note"
                                                     >
-                                                        <Share className="w-4 h-4" />
-                                                        <span className="text-sm font-medium hidden sm:inline">Share</span>
+                                                        <Share2 className="w-4 h-4" />
+                                                        <span className="text-[13px] font-semibold hidden sm:inline tracking-wide">Share</span>
                                                     </button>
 
                                                     {isShareOpen && (
@@ -879,7 +879,7 @@ const Dashboard = () => {
 
                                                             <div className="px-2">
                                                                 <button onClick={() => { setIsShareOpen(true); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
-                                                                    <Share className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Share</span>
+                                                                    <Share2 className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Share</span>
                                                                 </button>
                                                                 <button onClick={() => { handleShare(); setIsMoreMenuOpen(false); }} className="w-full text-left px-3 py-2 text-[14px] hover:bg-gray-100 dark:hover:bg-[#2d2d2d] rounded-lg flex items-center space-x-3 transition-colors group">
                                                                     <Link className="w-4 h-4 text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-200 transition-colors" /> <span className="text-gray-700 dark:text-gray-200">Copy link</span>
@@ -1115,4 +1115,4 @@ const Dashboard = () => {
     );
 };
 
-            export default Dashboard;
+export default Dashboard;

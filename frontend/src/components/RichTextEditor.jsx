@@ -12,8 +12,9 @@ import Image from '@tiptap/extension-image';
 import Table from '@tiptap/extension-table';
 import TableRow from '@tiptap/extension-table-row';
 import TableCell from '@tiptap/extension-table-cell';
-import { Extension } from '@tiptap/core';
+import { Extension, Node, mergeAttributes } from '@tiptap/core';
 import CharacterCount from '@tiptap/extension-character-count';
+import { useSettings } from '../context/SettingsContext';
 
 const CustomTableCell = TableCell.extend({
     addAttributes() {
@@ -118,6 +119,28 @@ import FontFamily from '@tiptap/extension-font-family';
 import Youtube from '@tiptap/extension-youtube';
 import VideoExtension from './VideoExtension';
 import { aiAPI } from '../api';
+
+const CalloutBlock = Node.create({
+    name: 'calloutBlock',
+    group: 'block',
+    content: 'inline*',
+    addAttributes() {
+        return {
+            bg: { default: '#fef9c3' },
+            color: { default: '#854d0e' },
+            label: { default: 'Tip' }
+        };
+    },
+    parseHTML() {
+        return [{ tag: 'div[data-type="callout"]' }];
+    },
+    renderHTML({ HTMLAttributes }) {
+        return ['div', mergeAttributes(HTMLAttributes, {
+            'data-type': 'callout',
+            style: `background-color: ${HTMLAttributes.bg}; border-left: 4px solid ${HTMLAttributes.color}; padding: 12px 16px; border-radius: 8px; margin: 8px 0; font-size: 14px; color: ${HTMLAttributes.color};`
+        }), ['strong', {}, HTMLAttributes.label + ': '], ['span', 0]];
+    }
+});
 
 // Custom Font Size Extension - extends TextStyle and keeps marks on node splits/enters
 const FontSize = TextStyle.extend({
@@ -509,7 +532,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
 
     return (
         <>
-            <div className="no-print flex items-center justify-between px-5 py-2.5 border-b border-gray-200/60 dark:border-white/10 bg-gradient-to-r from-white via-gray-50/50 to-white dark:from-[#1a1a1a] dark:via-[#1e1e1e] dark:to-[#1a1a1a] backdrop-blur-xl sticky top-0 z-20 text-gray-700 dark:text-gray-300 font-sans transition-all duration-200 shadow-sm dark:shadow-none">
+            <div className="no-print flex items-center justify-between px-6 py-3 border-b border-gray-100 dark:border-white/5 bg-white/95 dark:bg-[#1a1a1a]/95 backdrop-blur-xl sticky top-0 z-20 text-gray-700 dark:text-gray-300 font-sans shadow-sm dark:shadow-none transition-colors duration-300">
 
                 {/* YouTube Modal */}
                 <YoutubeModal
@@ -657,13 +680,13 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                         accept={uploadType === 'image' ? 'image/*' : uploadType === 'video' ? 'video/*' : uploadType === 'audio' ? 'audio/*' : '*/*'}
                     />
 
-                    {/* Left Group: Insert, Status, History */}
-                    <div className="flex items-center space-x-1">
+                    {/* Left Group: Insert, Undo, Redo */}
+                    <div className="flex items-center space-x-1 p-0.5 bg-gray-100/80 dark:bg-[#252525] rounded-xl border border-gray-200/60 dark:border-[#333]">
                         {/* Insert Menu */}
                         <div className="relative" ref={insertRef}>
                             <button
                                 onClick={() => setIsInsertOpen(!isInsertOpen)}
-                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isInsertOpen ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isInsertOpen ? 'bg-white dark:bg-[#333] shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-[#333]/60'}`}
                             >
                                 <Plus className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                                 <span className="text-sm font-medium">Insert</span>
@@ -747,19 +770,18 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
 
 
 
-                        <button onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Undo">
+                        <button onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-[#333] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Undo">
                             <CornerUpLeft className="w-4 h-4" />
                         </button>
-                        <button onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className="p-2 rounded-lg hover:bg-gray-100/80 dark:hover:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Redo">
+                        <button onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} className="p-1.5 rounded-lg hover:bg-white dark:hover:bg-[#333] text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:shadow-sm disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-200" title="Redo">
                             <CornerUpRight className="w-4 h-4" />
                         </button>
                     </div>
 
-                    <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+                    <div className="w-px h-5 bg-transparent mx-1" />
 
-                    {/* Center/Right Group: AI, Font, More */}
-                    {/* Center/Right Group: AI, Font, More */}
-                    <div className="flex items-center space-x-2">
+                    {/* Center Group: AI, Font Family, Font Size */}
+                    <div className="flex items-center space-x-1 p-0.5 bg-gray-100/80 dark:bg-[#252525] rounded-xl border border-gray-200/60 dark:border-[#333]">
                         {/* AI Menu */}
                         <div className="relative" ref={aiRef}>
                             <button
@@ -782,11 +804,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                             />
                         </div>
 
-                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
-
-
-
-                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+                        <div className="w-px h-4 bg-gray-300 dark:bg-[#444] mx-1" />
 
 
 
@@ -794,7 +812,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                         <div className="relative" ref={fontFamilyRef}>
                             <button
                                 onClick={() => setIsFontFamilyOpen(!isFontFamilyOpen)}
-                                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-200 ${isFontFamilyOpen ? 'bg-gray-100 dark:bg-white/8 text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                                className={`flex items-center space-x-1.5 px-2.5 py-1.5 rounded-lg transition-all duration-200 ${isFontFamilyOpen ? 'bg-white dark:bg-[#333] shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-[#333]/60'}`}
                             >
                                 <span className="text-[13px] w-[88px] truncate text-left font-medium leading-none">
                                     {editor.getAttributes('textStyle').fontFamily || 'Sans Serif'}
@@ -916,16 +934,15 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
 
                         <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
 
-                        {/* Zen Mode Toggle */}
                         <button
                             onClick={onToggleZenMode}
-                            className={`p-2 rounded-lg transition-all duration-200 ${isZenMode ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/20 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:bg-gray-100/80 dark:hover:bg-white/5 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                            className={`p-1.5 rounded-lg transition-all duration-200 ${isZenMode ? 'bg-white dark:bg-[#333] shadow-sm text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:bg-white/60 dark:hover:bg-[#333]/60 hover:text-gray-900 dark:hover:text-gray-200'}`}
                             title={isZenMode ? "Exit Zen Mode" : "Enter Zen Mode"}
                         >
                             {isZenMode ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                         </button>
 
-                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+                        <div className="w-px h-4 bg-gray-300 dark:bg-[#444] mx-1" />
 
                         {/* Font Size */}
                         <div className="relative" ref={fontSizeRef}>
@@ -944,7 +961,6 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                         <button
                                             key={size}
                                             onClick={() => {
-                                                // Use the custom FontSize extension
                                                 editor.chain().focus().setMark('textStyle', { fontSize: size }).run();
                                                 setIsFontSizeOpen(false);
                                             }}
@@ -956,8 +972,12 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                 </div>
                             )}
                         </div>
+                    </div>
 
-                        <div className="w-px h-5 bg-gray-200 dark:bg-white/10 mx-3" />
+                    <div className="w-px h-5 bg-transparent mx-1" />
+
+                    {/* Right Group: Zen Mode, More Menu */}
+                    <div className="flex items-center space-x-1 p-0.5 bg-gray-100/80 dark:bg-[#252525] rounded-xl border border-gray-200/60 dark:border-[#333]">
 
                         {/* More Menu */}
                         <div className="relative" ref={moreRef}>
@@ -972,7 +992,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                     }
                                     setIsMoreOpen(!isMoreOpen);
                                 }}
-                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isMoreOpen ? 'bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-gray-200 shadow-sm' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100/80 dark:hover:bg-white/5'}`}
+                                className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg transition-all duration-200 ${isMoreOpen ? 'bg-white dark:bg-[#333] shadow-sm text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300 hover:bg-white/60 dark:hover:bg-[#333]/60'}`}
                             >
                                 <span className="text-sm font-medium">More</span>
                                 <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
@@ -981,7 +1001,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                             {isMoreOpen && ReactDOM.createPortal(
                                 <div
                                     style={{ top: moreMenuPos.top, right: moreMenuPos.right }}
-                                    className="fixed w-[300px] bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-2xl border border-gray-200/80 dark:border-[#333] py-1.5 z-[9999] max-h-[80vh] overflow-y-auto custom-scrollbar"
+                                    className="fixed w-[350px] bg-white dark:bg-[#1e1e1e] rounded-2xl shadow-2xl border border-gray-200/80 dark:border-[#333] py-1.5 z-[9999] max-h-[80vh] overflow-y-auto custom-scrollbar"
                                 >
 
                                     {/* Note Stats Bar */}
@@ -1011,13 +1031,13 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                     <div className="px-2 py-1.5 border-b border-gray-100 dark:border-[#2a2a2a]">
                                         <div className="text-[10px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest px-2 pt-1 pb-1.5">Headings</div>
                                         <div className="grid grid-cols-3 gap-1 px-1">
-                                            <button onClick={() => { editor.chain().focus().toggleHeading({ level: 1 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
+                                            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 1 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 1 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
                                                 H1
                                             </button>
-                                            <button onClick={() => { editor.chain().focus().toggleHeading({ level: 2 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
+                                            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 2 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 2 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
                                                 H2
                                             </button>
-                                            <button onClick={() => { editor.chain().focus().toggleHeading({ level: 3 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
+                                            <button onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHeading({ level: 3 }).run(); setIsMoreOpen(false); }} className={`px-2 py-1.5 text-[13px] font-bold rounded-lg transition-all ${editor.isActive('heading', { level: 3 }) ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 ring-1 ring-blue-200 dark:ring-blue-800' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-[#2a2a2a]'}`}>
                                                 H3
                                             </button>
                                         </div>
@@ -1032,7 +1052,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                                     onMouseDown={(e) => {
                                                         e.preventDefault();
                                                         setActiveColor(null);
-                                                        editor.chain().unsetColor().run();
+                                                        editor.chain().focus().unsetColor().run();
                                                     }}
                                                     className="flex items-center space-x-1 text-[10px] text-red-500 hover:text-red-600 px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-900/20 transition-colors"
                                                 >
@@ -1050,7 +1070,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                                         onMouseDown={(e) => {
                                                             e.preventDefault();
                                                             setActiveColor(null);
-                                                            editor.chain().unsetColor().run();
+                                                            editor.chain().focus().unsetColor().run();
                                                         }}
                                                         className={`w-6 h-6 rounded-full bg-white border-2 hover:scale-110 transition-all ${!activeColor ? 'border-blue-500 ring-1 ring-blue-400' : 'border-gray-300 dark:border-gray-500 hover:border-gray-500'}`}
                                                         title="Default"
@@ -1062,20 +1082,42 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                                                 // CRITICAL: prevent focus loss so stored marks survive
                                                                 e.preventDefault();
                                                                 setActiveColor(c);
-                                                                editor.chain().setColor(c).run();
+                                                                editor.chain().focus().setColor(c).run();
                                                             }}
-                                                            className={`w-6 h-6 rounded-full hover:scale-110 transition-transform shadow-sm ${activeColor === c ? 'ring-2 ring-offset-1 ring-blue-500 ring-offset-white dark:ring-offset-[#1e1e1e] scale-110' : 'ring-1 ring-black/5'}`}
+                                                            className={`w-6 h-6 shrink-0 rounded-full hover:scale-110 transition-transform shadow-sm ${activeColor === c ? 'ring-2 ring-offset-1 ring-blue-500 ring-offset-white dark:ring-offset-[#1e1e1e] scale-110' : 'ring-1 ring-black/5'}`}
                                                             style={{ backgroundColor: c }}
                                                             title={c}
                                                         ></button>
                                                     ))}
+                                                    <div 
+                                                        onMouseDown={(e) => {
+                                                            // Store selection BEFORE the native color picker dialog opens and steals blur
+                                                            window.__tiptapSelection = editor.state.selection;
+                                                        }}
+                                                        className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden border border-gray-300 dark:border-gray-500 hover:scale-110 transition-transform shadow-sm flex items-center justify-center cursor-pointer" title="Custom color"
+                                                    >
+                                                        <input
+                                                            type="color"
+                                                            value={activeColor || '#000000'}
+                                                            onChange={(e) => {
+                                                                const c = e.target.value;
+                                                                setActiveColor(c);
+                                                                if (window.__tiptapSelection) {
+                                                                    editor.commands.setTextSelection(window.__tiptapSelection);
+                                                                }
+                                                                editor.chain().focus().setColor(c).run();
+                                                            }}
+                                                            className="absolute -top-2 -left-2 w-10 h-10 opacity-0 cursor-pointer"
+                                                        />
+                                                        <div className="w-full h-full rounded-full" style={{ background: activeColor && !['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#8b5cf6', '#d946ef', '#6b7280', '#1f2937'].includes(activeColor) ? activeColor : 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }}></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div>
                                                 <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-1.5 px-1 font-medium">Highlight</div>
                                                 <div className="flex items-center space-x-1.5 px-0.5">
                                                     <button
-                                                        onMouseDown={(e) => { e.preventDefault(); editor.chain().unsetHighlight().run(); }}
+                                                        onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().unsetHighlight().run(); }}
                                                         className="w-6 h-6 rounded-full border-2 border-gray-300 dark:border-gray-500 flex items-center justify-center hover:scale-110 transition-all"
                                                         title="None"
                                                     >
@@ -1084,12 +1126,31 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                                     {[{ c: '#fef08a', t: 'Yellow' }, { c: '#bbf7d0', t: 'Green' }, { c: '#bfdbfe', t: 'Blue' }, { c: '#fbcfe8', t: 'Pink' }, { c: '#e9d5ff', t: 'Purple' }, { c: '#fed7aa', t: 'Orange' }, { c: '#fecaca', t: 'Red' }].map(h => (
                                                         <button
                                                             key={h.c}
-                                                            onMouseDown={(e) => { e.preventDefault(); editor.chain().toggleHighlight({ color: h.c }).run(); }}
-                                                            className="w-6 h-6 rounded-full hover:scale-110 transition-transform shadow-sm ring-1 ring-black/5"
+                                                            onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleHighlight({ color: h.c }).run(); }}
+                                                            className="w-6 h-6 shrink-0 rounded-full hover:scale-110 transition-transform shadow-sm ring-1 ring-black/5"
                                                             style={{ backgroundColor: h.c }}
                                                             title={h.t}
                                                         ></button>
                                                     ))}
+                                                    <div 
+                                                        onMouseDown={(e) => {
+                                                            window.__tiptapSelection = editor.state.selection;
+                                                        }}
+                                                        className="relative w-6 h-6 shrink-0 rounded-full overflow-hidden border border-gray-300 dark:border-gray-500 hover:scale-110 transition-transform shadow-sm flex items-center justify-center cursor-pointer" title="Custom highlight"
+                                                    >
+                                                        <input
+                                                            type="color"
+                                                            onChange={(e) => {
+                                                                const c = e.target.value;
+                                                                if (window.__tiptapSelection) {
+                                                                    editor.commands.setTextSelection(window.__tiptapSelection);
+                                                                }
+                                                                editor.chain().focus().toggleHighlight({ color: c }).run();
+                                                            }}
+                                                            className="absolute -top-2 -left-2 w-10 h-10 opacity-0 cursor-pointer"
+                                                        />
+                                                        <div className="w-full h-full rounded-full" style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }}></div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -1105,7 +1166,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                             { fn: () => editor.chain().focus().toggleStrike().run(), icon: Strikethrough, label: 'Strikethrough', shortcut: '⌘⇧X', active: editor.isActive('strike') },
                                             { fn: () => editor.chain().focus().toggleCode().run(), icon: Code, label: 'Inline Code', shortcut: '⌘E', active: editor.isActive('code') },
                                         ].map((item, i) => (
-                                            <button key={i} onClick={item.fn} className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center justify-between transition-colors ${item.active ? 'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'}`}>
+                                            <button key={i} onMouseDown={(e) => { e.preventDefault(); item.fn(); }} className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center justify-between transition-colors ${item.active ? 'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'}`}>
                                                 <div className="flex items-center space-x-2.5">
                                                     <item.icon className="w-4 h-4" />
                                                     <span className="font-medium">{item.label}</span>
@@ -1126,7 +1187,7 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                             { fn: () => editor.chain().focus().toggleCodeBlock().run(), icon: Code2, label: 'Code Block', active: editor.isActive('codeBlock') },
                                             { fn: () => { editor.chain().focus().setHorizontalRule().run(); setIsMoreOpen(false); }, icon: MinusIcon, label: 'Divider', active: false },
                                         ].map((item, i) => (
-                                            <button key={i} onClick={item.fn} className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors ${item.active ? 'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'}`}>
+                                            <button key={i} onMouseDown={(e) => { e.preventDefault(); item.fn(); setIsMoreOpen(false); }} className={`w-full text-left px-3 py-1.5 text-[13px] hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors ${item.active ? 'text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-900/10' : 'text-gray-700 dark:text-gray-300'}`}>
                                                 <item.icon className="w-4 h-4" />
                                                 <span className="font-medium">{item.label}</span>
                                             </button>
@@ -1145,10 +1206,13 @@ const MenuBar = ({ editor, onTemplateChange, currentTemplate, isZenMode, onToggl
                                         ].map((c, i) => (
                                             <button
                                                 key={i}
-                                                onClick={() => {
-                                                    editor.chain().focus().insertContent(
-                                                        `<div style="background-color: ${c.bg}; border-left: 4px solid ${c.color}; padding: 12px 16px; border-radius: 8px; margin: 8px 0; font-size: 14px; color: ${c.color};">${c.label}: Your note here</div><p></p>`
-                                                    ).run();
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    editor.chain().focus().insertContent({
+                                                        type: 'calloutBlock',
+                                                        attrs: { bg: c.bg, color: c.color, label: c.label },
+                                                        content: [{ type: 'text', text: 'Your note here' }]
+                                                    }).run();
                                                     setIsMoreOpen(false);
                                                 }}
                                                 className="w-full text-left px-3 py-1.5 text-[13px] text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] rounded-lg flex items-center space-x-2.5 transition-colors font-medium"
@@ -1508,7 +1572,9 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
     // Get template metadata
     const templateData = getTemplateById(currentTemplate);
     const lineHeight = templateData?.lineHeight || 28; // Default line height
-    const fontSize = templateData?.lineHeight ? Math.floor(templateData.lineHeight * 0.65) : 16;
+    const baseFontSize = templateData?.lineHeight ? Math.floor(templateData.lineHeight * 0.65) : 16;
+    const { fontSize: userFontSize, spellCheck: userSpellCheck } = useSettings();
+    const fontSize = userFontSize === 'small' ? baseFontSize - 2 : userFontSize === 'large' ? baseFontSize + 4 : baseFontSize;
     // Adjust padding to align first line with the grid
     // For 24px lines, we need to start exactly at a multiple.
     // Usually 1 line height + some offset.
@@ -1571,9 +1637,11 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
             TextAlign.configure({
                 types: ['heading', 'paragraph'],
             }),
+            TextStyle,
             FontSize,
             FontFamily,
             Color,
+            CalloutBlock,
             Highlight.configure({ multicolor: true }),
             Subscript,
             Superscript,
@@ -1582,14 +1650,7 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
                 controls: false,
             }),
             VideoExtension,
-            BubbleMenuExtension.configure({
-                pluginKey: 'tableBubbleMenu',
-                shouldShow: ({ editor }) => editor.isActive('table'),
-            }),
-            BubbleMenuExtension.configure({
-                pluginKey: 'textBubbleMenu',
-                shouldShow: ({ editor, state }) => !editor.isActive('table') && !state.selection.empty,
-            }),
+
             TabExtension, // Add custom tab handler
         ],
         content: content,
@@ -1600,10 +1661,11 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
         editorProps: {
             attributes: {
                 class: `prose dark:prose-invert max-w-none focus:outline-none min-h-[1100px] text-gray-800 dark:text-gray-100 ${isZenMode ? 'prose-lg' : ''}`,
-                style: `line-height: ${lineHeight}px; font-size: ${fontSize}px; padding-top: ${paddingTop}px;`
+                style: `line-height: ${lineHeight}px; font-size: ${fontSize}px; padding-top: ${paddingTop}px;`,
+                spellcheck: userSpellCheck ? 'true' : 'false'
             },
         },
-    }, [currentTemplate, isZenMode]);
+    }, [currentTemplate, isZenMode, fontSize, userSpellCheck]);
 
     useEffect(() => {
         if (editor && content !== undefined) {
@@ -1655,11 +1717,11 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
                     <TextBubbleMenuContent editor={editor} />
                 </BubbleMenu>
             )}
-            <div className={`flex-1 overflow-y-auto custom-scrollbar bg-gray-50 dark:bg-[#0d0d0d]`}>
+            <div className={`flex-1 overflow-y-auto custom-scrollbar bg-gray-50/50 dark:bg-[#111111]`}>
                 {/* Editor page with shadow effect */}
-                <div className="min-h-full flex justify-center pt-8 pb-32 px-4">
+                <div className="min-h-full flex justify-center pt-8 pb-32 px-4 sm:px-6">
                     <div
-                        className="w-full max-w-5xl bg-white dark:bg-[#1a1a1a] shadow-2xl rounded-xl overflow-hidden border border-gray-100 dark:border-[#333] transition-colors duration-300"
+                        className="w-full max-w-5xl bg-white dark:bg-[#1c1c1e] shadow-[0_8px_30px_rgb(0,0,0,0.08)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] rounded-2xl overflow-hidden border border-gray-200/50 dark:border-white/5 transition-colors duration-300 ring-1 ring-gray-900/5 dark:ring-white/5"
                         style={isCustomTemplate ? {
                             backgroundImage: `url(${currentTemplate})`,
                             backgroundSize: 'cover',
@@ -1742,6 +1804,73 @@ const RichTextEditor = ({ content, onChange, editable = true, template = 'blank'
                 .dark ul[data-type="taskList"] input[type="checkbox"] {
                     background-color: #2d2d2d;
                     border-color: #4b5563;
+                }
+
+                /* Highlight Styling */
+                .ProseMirror mark {
+                    padding: 0.15em 0.3em;
+                    border-radius: 0.25em;
+                    margin: 0 -0.1em;
+                    box-decoration-break: clone;
+                    -webkit-box-decoration-break: clone;
+                }
+
+                /* Checklist Styling */
+                ul[data-type="taskList"] {
+                    list-style: none;
+                    padding: 0;
+                }
+                ul[data-type="taskList"] p {
+                    margin: 0;
+                }
+                ul[data-type="taskList"] li {
+                    display: flex;
+                    align-items: flex-start;
+                    margin-bottom: 0.25rem;
+                }
+                ul[data-type="taskList"] li > label {
+                    flex-shrink: 0;
+                    margin-right: 0.5rem;
+                    user-select: none;
+                    margin-top: 0.2rem;
+                }
+                ul[data-type="taskList"] li > label input[type="checkbox"] {
+                    appearance: none;
+                    background-color: transparent;
+                    margin: 0;
+                    width: 1.1em;
+                    height: 1.1em;
+                    border: 2px solid #9ca3af;
+                    border-radius: 4px;
+                    display: grid;
+                    place-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease-in-out;
+                }
+                .dark ul[data-type="taskList"] li > label input[type="checkbox"] {
+                    border-color: #4b5563;
+                }
+                ul[data-type="taskList"] li > label input[type="checkbox"]::before {
+                    content: "";
+                    width: 0.65em;
+                    height: 0.65em;
+                    transform: scale(0);
+                    transition: 120ms transform ease-in-out;
+                    box-shadow: inset 1em 1em white;
+                    background-color: white;
+                    transform-origin: center;
+                    clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+                }
+                ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+                    background-color: #3b82f6;
+                    border-color: #3b82f6;
+                }
+                ul[data-type="taskList"] li > label input[type="checkbox"]:checked::before {
+                    transform: scale(1);
+                }
+                ul[data-type="taskList"] li[data-checked="true"] > div {
+                    text-decoration: line-through;
+                    color: #9ca3af;
                 }
 
                 /* Table Styles */

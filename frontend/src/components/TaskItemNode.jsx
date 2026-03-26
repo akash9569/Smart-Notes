@@ -11,6 +11,7 @@ const TaskItemNode = ({ node, updateAttributes, deleteNode }) => {
             <div
                 className="drag-handle cursor-grab active:cursor-grabbing p-1 rounded hover:bg-gray-100 dark:hover:bg-[#2d2d2d] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity mt-0.5"
                 contentEditable="false"
+                suppressContentEditableWarning={true}
                 draggable="true"
                 data-drag-handle
             >
@@ -18,7 +19,7 @@ const TaskItemNode = ({ node, updateAttributes, deleteNode }) => {
             </div>
 
             {/* Checkbox */}
-            <div className="relative flex items-center justify-center mt-1" contentEditable="false">
+            <div className="relative flex items-center justify-center mt-1" contentEditable="false" suppressContentEditableWarning={true}>
                 <input
                     type="checkbox"
                     checked={isChecked}
@@ -48,6 +49,7 @@ const TaskItemNode = ({ node, updateAttributes, deleteNode }) => {
                 onClick={deleteNode}
                 className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                 contentEditable="false"
+                suppressContentEditableWarning={true}
                 title="Delete Task"
             >
                 <Trash2 className="w-4 h-4" />

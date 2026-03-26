@@ -48,7 +48,7 @@ app.use((req, res, next) => {
     next();
 });
 app.use(cors({
-    origin: 'http://localhost:5173', // Fixed to match frontend port
+    origin: 'http://localhost:5175', // Fixed to match frontend port
     credentials: true,
 }));
 

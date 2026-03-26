@@ -1,23 +1,21 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useTheme } from '../context/ThemeContext';
-import { Moon, Sun, Bell, Type, Clock, SortAsc, FileText, Palette, LayoutGrid, AlignLeft } from 'lucide-react';
+import { useSettings } from '../context/SettingsContext';
+import { useNotes } from '../context/NotesContext';
+import { Moon, Sun, Bell, Type, Clock, SortAsc, FileText, Palette, LayoutGrid, AlignLeft, Download, Database } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const SettingsView = () => {
     const { isDark, toggleTheme } = useTheme();
-
-    // Persist preferences in sessionStorage for per-tab isolation
-    const [notifications, setNotifications] = useState(() => sessionStorage.getItem('pref_notifications') === 'true');
-    const [fontSize, setFontSize] = useState(() => sessionStorage.getItem('pref_fontSize') || 'medium');
-    const [autoSave, setAutoSave] = useState(() => sessionStorage.getItem('pref_autoSave') || '2');
-    const [defaultView, setDefaultView] = useState(() => sessionStorage.getItem('pref_defaultView') || 'list');
-    const [sortOrder, setSortOrder] = useState(() => sessionStorage.getItem('pref_sortOrder') || 'updated');
-    const [spellCheck, setSpellCheck] = useState(() => sessionStorage.getItem('pref_spellCheck') !== 'false');
-
-    const updatePref = (key, value, setter) => {
-        sessionStorage.setItem(`pref_${key}`, value.toString());
-        setter(value);
-    };
+    const {
+        fontSize, setFontSize,
+        autoSaveInterval, setAutoSaveInterval,
+        spellCheck, setSpellCheck,
+        defaultView, setDefaultView,
+        sortOrder, setSortOrder,
+        pushNotifications, setPushNotifications
+    } = useSettings();
+    const { notes, journals } = useNotes();
 
     const Toggle = ({ enabled, onToggle }) => (
         <button
@@ -89,7 +87,7 @@ const SettingsView = () => {
                             </div>
                             <select
                                 value={fontSize}
-                                onChange={(e) => { updatePref('fontSize', e.target.value, setFontSize); toast.success(`Font size: ${e.target.value}`, { icon: '🔤' }); }}
+                                onChange={(e) => { setFontSize(e.target.value); toast.success(`Font size: ${e.target.value}`, { icon: '🔤' }); }}
                                 className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
                             >
                                 <option value="small">Small</option>
@@ -121,8 +119,8 @@ const SettingsView = () => {
                                 </div>
                             </div>
                             <select
-                                value={autoSave}
-                                onChange={(e) => { updatePref('autoSave', e.target.value, setAutoSave); toast.success(`Auto-save: ${e.target.value}s`, { icon: '💾' }); }}
+                                value={autoSaveInterval}
+                                onChange={(e) => { setAutoSaveInterval(e.target.value); toast.success(`Auto-save: ${e.target.value}s`, { icon: '💾' }); }}
                                 className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
                             >
                                 <option value="1">1 second</option>
@@ -143,7 +141,7 @@ const SettingsView = () => {
                                     <div className="text-xs text-gray-500 dark:text-gray-400">Check spelling while typing</div>
                                 </div>
                             </div>
-                            <Toggle enabled={spellCheck} onToggle={() => { const val = !spellCheck; updatePref('spellCheck', val, setSpellCheck); toast.success(val ? 'Spell check enabled' : 'Spell check disabled', { icon: '✏️' }); }} />
+                            <Toggle enabled={spellCheck} onToggle={() => { const val = !spellCheck; setSpellCheck(val); toast.success(val ? 'Spell check enabled' : 'Spell check disabled', { icon: '✏️' }); }} />
                         </div>
                     </div>
                 </div>
@@ -170,7 +168,7 @@ const SettingsView = () => {
                             </div>
                             <select
                                 value={defaultView}
-                                onChange={(e) => { updatePref('defaultView', e.target.value, setDefaultView); toast.success(`Default view: ${e.target.value}`, { icon: '📋' }); }}
+                                onChange={(e) => { setDefaultView(e.target.value); toast.success(`Default view: ${e.target.value}`, { icon: '📋' }); }}
                                 className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
                             >
                                 <option value="list">List View</option>
@@ -192,7 +190,7 @@ const SettingsView = () => {
                             </div>
                             <select
                                 value={sortOrder}
-                                onChange={(e) => { updatePref('sortOrder', e.target.value, setSortOrder); toast.success(`Sort by: ${e.target.value}`, { icon: '🔃' }); }}
+                                onChange={(e) => { setSortOrder(e.target.value); toast.success(`Sort by: ${e.target.value}`, { icon: '🔃' }); }}
                                 className="px-3 py-1.5 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 cursor-pointer"
                             >
                                 <option value="updated">Last Updated</option>
@@ -224,24 +222,62 @@ const SettingsView = () => {
                                 </div>
                             </div>
                             <Toggle
-                                enabled={notifications}
+                                enabled={pushNotifications}
                                 onToggle={() => {
-                                    const newVal = !notifications;
+                                    const newVal = !pushNotifications;
                                     if (newVal && 'Notification' in window) {
                                         Notification.requestPermission().then(perm => {
                                             if (perm === 'granted') {
-                                                updatePref('notifications', true, setNotifications);
+                                                setPushNotifications(true);
                                                 toast.success('Notifications enabled!', { icon: '🔔' });
                                             } else {
                                                 toast.error('Browser blocked notifications. Please enable in browser settings.', { icon: '🔕' });
                                             }
                                         });
                                     } else {
-                                        updatePref('notifications', newVal, setNotifications);
+                                        setPushNotifications(newVal);
                                         toast.success(newVal ? 'Notifications on' : 'Notifications off', { icon: newVal ? '🔔' : '🔕' });
                                     }
                                 }}
                             />
+                        </div>
+                    </div>
+                </div>
+
+                {/* Data & Export */}
+                <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-gray-200 dark:border-[#333] shadow-sm overflow-hidden mb-12">
+                    <div className="px-5 sm:px-6 py-4 border-b border-gray-100 dark:border-[#2a2a2a]">
+                        <h3 className="text-base font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                            <Database className="w-4 h-4 text-indigo-500" />
+                            Data & Privacy
+                        </h3>
+                    </div>
+                    <div className="divide-y divide-gray-100 dark:divide-[#2a2a2a]">
+                        <div className="px-5 sm:px-6 py-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg bg-green-50 dark:bg-green-900/20 flex items-center justify-center">
+                                    <Download className="w-4 h-4 text-green-600 dark:text-green-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm font-medium text-gray-900 dark:text-white">Export App Data</div>
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">Download a JSON copy of all your notes and journals</div>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => {
+                                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ notes, journals }, null, 2));
+                                    const downloadAnchorNode = document.createElement('a');
+                                    downloadAnchorNode.setAttribute("href", dataStr);
+                                    downloadAnchorNode.setAttribute("download", `smart-notes-export-${new Date().toISOString().split('T')[0]}.json`);
+                                    document.body.appendChild(downloadAnchorNode); // required for firefox
+                                    downloadAnchorNode.click();
+                                    downloadAnchorNode.remove();
+                                    toast.success('App data exported successfully', { icon: '📦' });
+                                }}
+                                className="px-4 py-2 bg-gray-50 dark:bg-[#252525] border border-gray-200 dark:border-[#444] rounded-lg text-sm text-gray-700 dark:text-gray-300 outline-none focus:ring-2 focus:ring-indigo-500/50 hover:bg-gray-100 dark:hover:bg-[#2a2a2a] transition-colors"
+                            >
+                                Export JSON
+                            </button>
                         </div>
                     </div>
                 </div>

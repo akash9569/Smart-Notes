@@ -13,10 +13,12 @@ import {
     ChevronDown
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSettings } from '../context/SettingsContext';
 
 const NotesList = ({ notes, currentNote, onSelectNote, onDeleteNote, onPinNote, onDuplicateNote }) => {
+    const { sortOrder, defaultView } = useSettings();
     const [searchQuery, setSearchQuery] = useState('');
-    const [sortBy, setSortBy] = useState('updated'); // 'updated', 'title', 'wordCount'
+    const [sortBy, setSortBy] = useState(sortOrder || 'updated'); // 'updated', 'title', 'wordCount'
     const [selectedTags, setSelectedTags] = useState([]);
     const [isSortOpen, setIsSortOpen] = useState(false);
 
@@ -119,7 +121,7 @@ const NotesList = ({ notes, currentNote, onSelectNote, onDeleteNote, onPinNote, 
                 />
 
                 {/* Main content */}
-                <div className="pl-4 pr-3 py-4">
+                <div className={`pl-4 pr-3 ${defaultView === 'compact' ? 'py-2' : 'py-4'}`}>
                     {/* Header */}
                     <div className="flex items-start gap-2 mb-2">
                         <FileText className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 flex-shrink-0" />
@@ -349,11 +351,11 @@ const NotesList = ({ notes, currentNote, onSelectNote, onDeleteNote, onPinNote, 
                         </p>
                     </div>
                 ) : (
-                    <div className="space-y-3 pt-3">
+                    <div className={defaultView === 'grid' ? "grid grid-cols-2 gap-3 pt-3" : "space-y-3 pt-3"}>
                         {/* Pinned notes section */}
                         {pinnedNotes.length > 0 && (
                             <>
-                                <div className="flex items-center gap-2 px-2 mb-2">
+                                <div className={`flex items-center gap-2 px-2 mb-2 ${defaultView === 'grid' ? 'col-span-2' : ''}`}>
                                     <Pin className="w-3.5 h-3.5 text-blue-500" />
                                     <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                                         Pinned
@@ -364,7 +366,7 @@ const NotesList = ({ notes, currentNote, onSelectNote, onDeleteNote, onPinNote, 
                                 ))}
 
                                 {unpinnedNotes.length > 0 && (
-                                    <div className="h-px bg-gray-200 dark:bg-[#333] my-4" />
+                                    <div className={`h-px bg-gray-200 dark:bg-[#333] my-4 ${defaultView === 'grid' ? 'col-span-2' : ''}`} />
                                 )}
                             </>
                         )}

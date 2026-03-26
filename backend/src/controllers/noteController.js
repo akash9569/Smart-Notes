@@ -180,7 +180,7 @@ export const shareNote = async (req, res) => {
         await note.save();
 
         // Send email
-        const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/notes/${note._id}`;
+        const shareUrl = `${process.env.FRONTEND_URL || 'http://localhost:5175'}/notes/${note._id}`;
         const message = `
             <h1>You have been invited to view a note!</h1>
             <p>${req.user.name || 'A user'} has shared a note with you: <strong>${note.title}</strong></p>
